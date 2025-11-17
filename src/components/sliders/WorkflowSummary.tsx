@@ -45,7 +45,7 @@ export default function WorkflowSummary({ workflow }: WorkflowSummaryProps) {
         </div>
 
         <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-600">Total Transactions/Month</span>
+          <span className="text-sm text-gray-600">AI Workflow Executions/Month</span>
           <div className="flex items-center gap-2">
             <TrendingUp className="h-4 w-4 text-gray-400" />
             <span className="text-sm font-semibold text-black">{totalTransactions.toLocaleString()}</span>
