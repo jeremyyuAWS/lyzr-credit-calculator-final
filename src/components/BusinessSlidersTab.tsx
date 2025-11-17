@@ -123,11 +123,15 @@ export default function BusinessSlidersTab({ initialWorkflow }: BusinessSlidersT
     return usdAmount * currencyRates[selectedCurrency].rate;
   };
 
-  // Format currency with proper symbol
+  // Format currency with proper symbol and comma separators
   const formatCurrency = (usdAmount: number, decimals: number = 2): string => {
     const converted = convertCurrency(usdAmount);
     const symbol = currencyRates[selectedCurrency].symbol;
-    return `${symbol}${converted.toFixed(decimals)}`;
+    const formatted = converted.toLocaleString('en-US', {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals
+    });
+    return `${symbol}${formatted}`;
   };
 
   // Pricing data from database
