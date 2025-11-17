@@ -24,8 +24,8 @@ export default function ExplainMyPrice({ costBreakdown, workflow, onClose, forma
       <div className="bg-white rounded-2xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div>
-            <h2 className="text-2xl font-bold text-black">Understanding Your AI Costs</h2>
-            <p className="text-sm text-gray-600 mt-1">Simple breakdown of what powers your AI agents</p>
+            <h2 className="text-2xl font-bold text-black">Your Cost Breakdown</h2>
+            <p className="text-sm text-gray-600 mt-1">Detailed receipt showing what powers your AI agents</p>
           </div>
           <button
             onClick={onClose}

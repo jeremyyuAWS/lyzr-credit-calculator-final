@@ -333,13 +333,6 @@ export default function BusinessSlidersTab({ initialWorkflow }: BusinessSlidersT
                   />
                 </button>
               </div>
-              <button
-                onClick={() => setShowExplainPrice(!showExplainPrice)}
-                className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-all"
-              >
-                <Info className="h-4 w-4" />
-                {showExplainPrice ? 'Hide' : 'Explain My Price'}
-              </button>
             </div>
           </div>
         </div>
@@ -387,10 +380,16 @@ export default function BusinessSlidersTab({ initialWorkflow }: BusinessSlidersT
                     Monthly & Annual Estimates
                   </h2>
                   <div className="space-y-4">
-                    <div className="p-6 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl border border-gray-200">
-                      <div className="flex items-center gap-2 mb-2">
-                        <TrendingUp className="h-5 w-5 text-gray-600" />
-                        <h3 className="text-lg font-semibold text-black">Monthly</h3>
+                    <button
+                      onClick={() => setShowExplainPrice(true)}
+                      className="w-full p-6 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl border-2 border-gray-200 hover:border-gray-400 hover:shadow-md transition-all cursor-pointer text-left"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <TrendingUp className="h-5 w-5 text-gray-600" />
+                          <h3 className="text-lg font-semibold text-black">Monthly</h3>
+                        </div>
+                        <Info className="h-4 w-4 text-gray-400" />
                       </div>
                       <p className="text-3xl font-bold text-black mb-1">
                         {formatWithCommas(costBreakdown.monthly_credits)} Credits
@@ -401,12 +400,19 @@ export default function BusinessSlidersTab({ initialWorkflow }: BusinessSlidersT
                       <p className="text-xs text-gray-500 mt-3">
                         + {formatCurrency(costBreakdown.setup_costs * 0.008)} one-time setup
                       </p>
-                    </div>
+                      <p className="text-xs text-blue-600 mt-2 font-medium">Click to see detailed breakdown →</p>
+                    </button>
 
-                    <div className="p-6 bg-gradient-to-br from-black to-gray-800 rounded-xl border border-gray-700 text-white">
-                      <div className="flex items-center gap-2 mb-2">
-                        <DollarSign className="h-5 w-5" />
-                        <h3 className="text-lg font-semibold">Annual</h3>
+                    <button
+                      onClick={() => setShowExplainPrice(true)}
+                      className="w-full p-6 bg-gradient-to-br from-black to-gray-800 rounded-xl border-2 border-gray-700 hover:border-gray-500 hover:shadow-lg transition-all cursor-pointer text-left text-white"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          <DollarSign className="h-5 w-5" />
+                          <h3 className="text-lg font-semibold">Annual</h3>
+                        </div>
+                        <Info className="h-4 w-4 text-gray-400" />
                       </div>
                       <p className="text-3xl font-bold mb-1">
                         {formatWithCommas(costBreakdown.annual_credits)} Credits
@@ -417,7 +423,8 @@ export default function BusinessSlidersTab({ initialWorkflow }: BusinessSlidersT
                       <p className="text-xs text-gray-400 mt-3">
                         + {formatCurrency(costBreakdown.setup_costs * 0.008)} one-time setup
                       </p>
-                    </div>
+                      <p className="text-xs text-blue-400 mt-2 font-medium">Click to see detailed breakdown →</p>
+                    </button>
                   </div>
 
                   {/* Cost Scenarios */}
