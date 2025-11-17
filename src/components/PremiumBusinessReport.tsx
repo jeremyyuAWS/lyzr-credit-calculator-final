@@ -154,55 +154,50 @@ export default function PremiumBusinessReport({
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            {/* Email Capture */}
-            <div className="flex items-center gap-2">
-              {!emailSent ? (
-                <>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <input
-                      type="email"
-                      placeholder="your@email.com"
-                      value={email}
-                      onChange={(e) => validateEmail(e.target.value)}
-                      className={`pl-10 pr-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 transition-all ${
-                        emailValid
-                          ? 'border-green-300 focus:ring-green-500'
-                          : email.length > 0
-                          ? 'border-red-300 focus:ring-red-500'
-                          : 'border-gray-300 focus:ring-black'
-                      } ${emailSending ? 'bg-gray-100' : ''}`}
-                      disabled={emailSending}
-                    />
-                  </div>
+          <div className="flex items-center gap-4">
+            {/* Email Capture - Premium Format */}
+            {!emailSent ? (
+              <div className="flex items-center gap-3 bg-white border border-gray-200 rounded-lg px-4 py-2 shadow-sm hover:shadow-md transition-shadow">
+                <Mail className="h-5 w-5 text-gray-400 flex-shrink-0" />
+                <div className="flex items-center gap-2">
+                  <input
+                    type="email"
+                    placeholder="your@email.com"
+                    value={email}
+                    onChange={(e) => validateEmail(e.target.value)}
+                    className={`w-48 px-2 py-1 text-sm border-0 focus:outline-none focus:ring-0 ${
+                      emailValid
+                        ? 'text-green-700'
+                        : email.length > 0
+                        ? 'text-red-600'
+                        : 'text-gray-700'
+                    } ${emailSending ? 'bg-gray-50' : ''}`}
+                    disabled={emailSending}
+                  />
                   {emailValid && (
                     <button
                       onClick={handleEmailReport}
                       disabled={emailSending}
-                      className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 disabled:bg-gray-400 transition-all text-sm font-medium whitespace-nowrap"
+                      className="flex items-center gap-2 px-3 py-1 bg-black text-white rounded-md hover:bg-gray-800 disabled:bg-gray-400 transition-all text-xs font-medium whitespace-nowrap"
                     >
                       {emailSending ? (
                         <>
-                          <Loader className="h-4 w-4 animate-spin" />
-                          Sending...
+                          <Loader className="h-3 w-3 animate-spin" />
+                          Sending
                         </>
                       ) : (
-                        <>
-                          <Mail className="h-4 w-4" />
-                          Email Report
-                        </>
+                        'Email me this analysis'
                       )}
                     </button>
                   )}
-                </>
-              ) : (
-                <div className="flex items-center gap-2 px-4 py-2 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm font-medium">
-                  <Check className="h-4 w-4" />
-                  Report sent to {email}
                 </div>
-              )}
-            </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 px-4 py-2 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm font-medium shadow-sm">
+                <Check className="h-4 w-4" />
+                <span>Report sent to {email}</span>
+              </div>
+            )}
 
             <button
               onClick={onClose}
@@ -231,8 +226,14 @@ export default function PremiumBusinessReport({
               </div>
               <h3 className="text-xl font-bold text-blue-900">Executive Summary</h3>
             </div>
-            <div className="prose prose-sm max-w-none text-gray-700 whitespace-pre-line">
-              {executiveSummary}
+            <div className="prose prose-sm max-w-none text-gray-800 leading-relaxed">
+              {executiveSummary.split('\n\n').map((paragraph, idx) => (
+                <p key={idx} className="mb-3 last:mb-0">
+                  {paragraph.split('**').map((part, i) =>
+                    i % 2 === 0 ? part : <strong key={i} className="font-bold text-blue-900">{part}</strong>
+                  )}
+                </p>
+              ))}
             </div>
           </section>
 
@@ -244,8 +245,18 @@ export default function PremiumBusinessReport({
               </div>
               <h3 className="text-xl font-bold text-gray-900">Workflow Overview</h3>
             </div>
-            <div className="space-y-2 text-sm text-gray-700 whitespace-pre-line">
-              {workflowNarrative}
+            <div className="space-y-3 text-sm text-gray-800 leading-relaxed">
+              {workflowNarrative.split('\n').map((line, idx) => {
+                if (!line.trim()) return null;
+                const isBold = line.startsWith('**');
+                const isIndented = line.startsWith('   •');
+
+                return (
+                  <div key={idx} className={isIndented ? 'ml-6 text-gray-600' : isBold ? 'font-semibold text-gray-900' : ''}>
+                    {line.replace(/\*\*/g, '').replace(/^   • /, '• ')}
+                  </div>
+                );
+              })}
             </div>
           </section>
 
@@ -295,8 +306,21 @@ export default function PremiumBusinessReport({
               </div>
               <h3 className="text-xl font-bold text-gray-900">Model Selection Rationale</h3>
             </div>
-            <div className="prose prose-sm max-w-none text-gray-700 whitespace-pre-line">
-              {modelRationale}
+            <div className="space-y-4 text-sm text-gray-800 leading-relaxed">
+              {modelRationale.split('\n\n').map((section, idx) => {
+                const lines = section.split('\n');
+                const heading = lines[0];
+                const content = lines.slice(1).join(' ');
+
+                return (
+                  <div key={idx}>
+                    {heading.startsWith('**') ? (
+                      <h4 className="font-bold text-gray-900 mb-1">{heading.replace(/\*\*/g, '')}</h4>
+                    ) : null}
+                    <p className="text-gray-700">{content}</p>
+                  </div>
+                );
+              })}
             </div>
           </section>
 
