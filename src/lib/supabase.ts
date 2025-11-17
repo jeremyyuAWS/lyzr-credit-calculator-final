@@ -130,6 +130,35 @@ export interface ChatFolder {
   updated_at: string;
 }
 
+export interface ReportAnalysis {
+  id: string;
+  session_id: string | null;
+  report_title: string;
+  workflow_config: Record<string, any>;
+  cost_breakdown: Record<string, any>;
+  executive_summary: string;
+  workflow_narrative: string;
+  agent_breakdown: any[];
+  model_rationale: string;
+  optimization_suggestions: any[];
+  metadata: Record<string, any>;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ReportDelivery {
+  id: string;
+  report_id: string;
+  recipient_email: string;
+  delivery_status: 'pending' | 'sent' | 'failed' | 'bounced';
+  pdf_url: string | null;
+  error_message: string | null;
+  sent_at: string | null;
+  opened_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface LyzrApiConfig {
   id: string;
   api_url: string;

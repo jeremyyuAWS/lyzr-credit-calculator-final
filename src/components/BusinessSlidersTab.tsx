@@ -4,7 +4,7 @@ import VolumeSliders from './sliders/VolumeSliders';
 import ComplexitySliders from './sliders/ComplexitySliders';
 import TokenControls from './sliders/TokenControls';
 import WorkflowSummary from './sliders/WorkflowSummary';
-import ExplainMyPrice from './sliders/ExplainMyPrice';
+import PremiumBusinessReport from './PremiumBusinessReport';
 import CostForecastChart from './sliders/CostForecastChart';
 import { calculateCompleteCostBreakdown, CostBreakdown } from '../lib/costEngine';
 import type {
@@ -544,13 +544,12 @@ export default function BusinessSlidersTab({ initialWorkflow }: BusinessSlidersT
           </div>
         </div>
 
-        {/* Explain My Price Modal */}
+        {/* Premium Business Report Modal */}
         {showExplainPrice && costBreakdown && (
-          <ExplainMyPrice
+          <PremiumBusinessReport
             costBreakdown={costBreakdown}
             workflow={workflow}
             onClose={() => setShowExplainPrice(false)}
-            formatCurrency={formatCurrency}
           />
         )}
       </div>
