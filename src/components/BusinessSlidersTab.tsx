@@ -150,6 +150,15 @@ export default function BusinessSlidersTab({ initialWorkflow }: BusinessSlidersT
     }
   }, [workflow, modelPricing, featurePricing, setupPricing, handlingFee]);
 
+  useEffect(() => {
+    if (initialWorkflow) {
+      setWorkflow(prev => ({
+        ...prev,
+        ...initialWorkflow,
+      }));
+    }
+  }, [initialWorkflow]);
+
   async function loadPricingData() {
     try {
       setLoading(true);
