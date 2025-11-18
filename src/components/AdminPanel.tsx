@@ -20,6 +20,16 @@ type TabType = 'setup-costs' | 'llm-pricing' | 'feature-pricing' | 'lyzr-api' | 
 export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
   const [activeTab, setActiveTab] = useState<TabType>('setup-costs');
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [debugConfig, setDebugConfig] = useState<{
+    formulaKey?: string;
+    variables?: string[];
+  } | null>(null);
+
+  function handleDebugFormula(formulaKey: string, variables: string[]) {
+    setDebugConfig({ formulaKey, variables });
+    setActiveTab('debug');
+    setShowAdvanced(true);
+  }
 
   if (!isOpen) return null;
 
@@ -159,11 +169,11 @@ export default function AdminPanel({ isOpen, onClose }: AdminPanelProps) {
           {activeTab === 'feature-pricing' && <FeaturePricingTab />}
           {activeTab === 'setup-costs' && <SetupCostsGlobalTab />}
           {activeTab === 'lyzr-api' && <LyzrApiSettingsTab />}
-          {activeTab === 'formulas' && <FormulaEditorTab />}
+          {activeTab === 'formulas' && <FormulaEditorTab onDebugFormula={handleDebugFormula} />}
           {activeTab === 'variables' && <PricingVariablesTab />}
           {activeTab === 'scenarios' && <ScenarioSandboxTab />}
           {activeTab === 'competitors' && <CompetitorComparisonTab />}
-          {activeTab === 'debug' && <DebugModeTab />}
+          {activeTab === 'debug' && <DebugModeTab debugConfig={debugConfig} onConfigConsumed={() => setDebugConfig(null)} />}
         </div>
 
         <div className="flex items-center justify-end p-6 border-t border-gray-200 bg-gray-50">

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Plus, Edit2, Trash2, Save, X, Play, Lightbulb } from 'lucide-react';
+import { Plus, Edit2, Trash2, Save, X, Play, Lightbulb, Bug } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
 interface Formula {
@@ -24,7 +24,11 @@ interface PricingVariable {
   unit: string | null;
 }
 
-export default function FormulaEditorTab() {
+interface FormulaEditorTabProps {
+  onDebugFormula?: (formulaKey: string, variables: string[]) => void;
+}
+
+export default function FormulaEditorTab({ onDebugFormula }: FormulaEditorTabProps) {
   const [formulas, setFormulas] = useState<Formula[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -570,6 +574,16 @@ export default function FormulaEditorTab() {
                           )}
                         </div>
                         <div className="flex items-center gap-2">
+                          {onDebugFormula && (
+                            <button
+                              onClick={() => onDebugFormula(formula.formula_key, formula.variables_used)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-green-100 text-green-700 hover:bg-green-200 rounded-lg transition-colors text-xs font-medium"
+                              title="Debug this formula in Debug Mode"
+                            >
+                              <Bug className="h-4 w-4" />
+                              Debug
+                            </button>
+                          )}
                           <button
                             onClick={() => startTest(formula)}
                             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"

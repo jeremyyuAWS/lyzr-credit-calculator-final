@@ -46,7 +46,15 @@ interface PricingVariable {
   is_overridden: boolean;
 }
 
-export default function DebugModeTab() {
+interface DebugModeTabProps {
+  debugConfig?: {
+    formulaKey?: string;
+    variables?: string[];
+  } | null;
+  onConfigConsumed?: () => void;
+}
+
+export default function DebugModeTab({ debugConfig, onConfigConsumed }: DebugModeTabProps) {
   const [inputs, setInputs] = useState<Record<string, number>>({});
   const [trace, setTrace] = useState<DebugTrace | null>(null);
   const [calculating, setCalculating] = useState(false);
@@ -65,6 +73,41 @@ export default function DebugModeTab() {
   useEffect(() => {
     loadFormulasAndVariables();
   }, []);
+
+  useEffect(() => {
+    if (debugConfig && debugConfig.formulaKey && formulas.length > 0 && variables.length > 0) {
+      const newSelectedFormulas = new Set([debugConfig.formulaKey]);
+      setSelectedFormulas(newSelectedFormulas);
+
+      if (debugConfig.variables && debugConfig.variables.length > 0) {
+        const newSelectedVars = new Set(debugConfig.variables);
+        setSelectedVariables(newSelectedVars);
+
+        const newInputs: Record<string, number> = {};
+        debugConfig.variables.forEach(varKey => {
+          const variable = variables.find(v => v.variable_key === varKey);
+          if (variable) {
+            newInputs[varKey] = variable.variable_value;
+          }
+        });
+
+        newInputs['complexityMultiplier'] = 1.2;
+        newInputs['agentMultiplier'] = 1.2;
+        newInputs['scenarioMultiplier'] = 0.8;
+        newInputs['registrationsPerDay'] = 100;
+        newInputs['workingDaysPerMonth'] = 22;
+
+        setInputs(newInputs);
+      }
+
+      setSearchTerm('');
+      setSearchType('all');
+
+      if (onConfigConsumed) {
+        onConfigConsumed();
+      }
+    }
+  }, [debugConfig, formulas, variables, onConfigConsumed]);
 
   async function loadFormulasAndVariables() {
     setLoading(true);
@@ -527,6 +570,22 @@ export default function DebugModeTab() {
           )}
         </div>
       </div>
+
+      {/* Debug Config Notification */}
+      {selectedFormulas.size > 0 && debugConfig && debugConfig.formulaKey && (
+        <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <Bug className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <h4 className="text-sm font-semibold text-green-900">Formula Debug Mode Active</h4>
+              <p className="text-sm text-green-700 mt-1">
+                Formula <span className="font-mono font-semibold">{debugConfig.formulaKey}</span> has been loaded with its required variables.
+                Adjust the input values below and click "Run Calculation" to trace the formula execution.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Two Column Layout */}
       <div className="grid grid-cols-3 gap-6">
