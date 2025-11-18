@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Play, Save, ChevronRight, RefreshCw, Search, Calculator, Code } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Play, Save, ChevronRight, RefreshCw, Search, Calculator, Code, Bug } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
 interface CalculationStep {
@@ -69,6 +69,7 @@ export default function DebugModeTab({ debugConfig, onConfigConsumed }: DebugMod
   ]));
   const [searchType, setSearchType] = useState<'all' | 'variables' | 'formulas'>('all');
   const [selectedFormulas, setSelectedFormulas] = useState<Set<string>>(new Set());
+  const shouldAutoRunRef = useRef(false);
 
   useEffect(() => {
     loadFormulasAndVariables();
@@ -98,6 +99,9 @@ export default function DebugModeTab({ debugConfig, onConfigConsumed }: DebugMod
         newInputs['workingDaysPerMonth'] = 22;
 
         setInputs(newInputs);
+
+        // Mark that we should auto-run the calculation
+        shouldAutoRunRef.current = true;
       }
 
       setSearchTerm('');
@@ -108,6 +112,14 @@ export default function DebugModeTab({ debugConfig, onConfigConsumed }: DebugMod
       }
     }
   }, [debugConfig, formulas, variables, onConfigConsumed]);
+
+  // Auto-run calculation when inputs are ready and flag is set
+  useEffect(() => {
+    if (shouldAutoRunRef.current && selectedFormulas.size > 0 && Object.keys(inputs).length > 0) {
+      shouldAutoRunRef.current = false;
+      runCalculation();
+    }
+  }, [inputs, selectedFormulas]);
 
   async function loadFormulasAndVariables() {
     setLoading(true);
@@ -782,29 +794,44 @@ export default function DebugModeTab({ debugConfig, onConfigConsumed }: DebugMod
               )}
             </div>
             <div className="grid grid-cols-3 gap-4 max-h-[400px] overflow-y-auto">
-              {Object.entries(inputs)
-                .sort(([keyA], [keyB]) => {
-                  // Prioritize selected variables
-                  const aIsVar = selectedVariables.has(keyA);
-                  const bIsVar = selectedVariables.has(keyB);
-                  if (aIsVar && !bIsVar) return -1;
-                  if (!aIsVar && bIsVar) return 1;
-                  return keyA.localeCompare(keyB);
-                })
-                .map(([key, value]) => {
-                  const variable = variables.find(v => v.variable_key === key);
-                  const isVariable = !!variable;
-                  const displayName = variable ? variable.variable_name : key.replace(/([A-Z])/g, ' $1').trim();
+              {(() => {
+                // If formulas are selected, only show their required variables
+                let displayedInputs = Object.entries(inputs);
 
-                  return (
-                    <div key={key} className={isVariable ? 'border-l-4 border-blue-500 pl-2' : ''}>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        {displayName}
-                        {variable?.unit && <span className="text-xs text-gray-500 ml-1">({variable.unit})</span>}
-                      </label>
-                      <input
-                        type="number"
-                        step="any"
+                if (selectedFormulas.size > 0) {
+                  const requiredVars = new Set<string>();
+                  formulas
+                    .filter(f => selectedFormulas.has(f.formula_key))
+                    .forEach(f => {
+                      f.variables_used.forEach(v => requiredVars.add(v));
+                    });
+
+                  displayedInputs = displayedInputs.filter(([key]) => requiredVars.has(key));
+                }
+
+                return displayedInputs
+                  .sort(([keyA], [keyB]) => {
+                    // Prioritize selected variables
+                    const aIsVar = selectedVariables.has(keyA);
+                    const bIsVar = selectedVariables.has(keyB);
+                    if (aIsVar && !bIsVar) return -1;
+                    if (!aIsVar && bIsVar) return 1;
+                    return keyA.localeCompare(keyB);
+                  })
+                  .map(([key, value]) => {
+                    const variable = variables.find(v => v.variable_key === key);
+                    const isVariable = !!variable;
+                    const displayName = variable ? variable.variable_name : key.replace(/([A-Z])/g, ' $1').trim();
+
+                    return (
+                      <div key={key} className={isVariable ? 'border-l-4 border-blue-500 pl-2' : ''}>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          {displayName}
+                          {variable?.unit && <span className="text-xs text-gray-500 ml-1">({variable.unit})</span>}
+                        </label>
+                        <input
+                          type="number"
+                          step="any"
                         value={value}
                         onChange={(e) => updateInput(key, parseFloat(e.target.value) || 0)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent font-mono text-sm"
@@ -814,8 +841,17 @@ export default function DebugModeTab({ debugConfig, onConfigConsumed }: DebugMod
                       )}
                     </div>
                   );
-                })}
+                });
+              })()}
             </div>
+
+            {selectedFormulas.size === 0 && (
+              <div className="mt-4 text-center py-8 text-gray-500">
+                <Calculator className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                <p className="text-sm font-medium">No formula selected</p>
+                <p className="text-xs mt-1">Select a formula from the left panel to see its input parameters</p>
+              </div>
+            )}
 
             <button
               onClick={runCalculation}
