@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Play, Save, ChevronRight, Code, Database, TrendingUp } from 'lucide-react';
+import { Play, Save, ChevronRight, RefreshCw, Search, Calculator } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 
 interface CalculationStep {
@@ -47,23 +47,18 @@ interface PricingVariable {
 }
 
 export default function DebugModeTab() {
-  const [inputs, setInputs] = useState({
-    baseCredits: 40,
-    complexityMultiplier: 1.2,
-    agentMultiplier: 1.2,
-    scenarioMultiplier: 0.8,
-    registrationsPerDay: 100,
-    workingDaysPerMonth: 22,
-    creditPrice: 0.008,
-  });
-
+  const [inputs, setInputs] = useState<Record<string, number>>({});
   const [trace, setTrace] = useState<DebugTrace | null>(null);
   const [calculating, setCalculating] = useState(false);
   const [expandedSteps, setExpandedSteps] = useState<number[]>([]);
   const [formulas, setFormulas] = useState<Formula[]>([]);
   const [variables, setVariables] = useState<PricingVariable[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'trace' | 'formulas' | 'variables'>('trace');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedVariables, setSelectedVariables] = useState<Set<string>>(new Set([
+    'base_credits',
+    'credit_price_usd',
+  ]));
 
   useEffect(() => {
     loadFormulasAndVariables();
@@ -87,17 +82,22 @@ export default function DebugModeTab() {
     if (variablesResult.data) {
       setVariables(variablesResult.data);
 
-      // Auto-populate inputs from variables
-      const varMap: Record<string, number> = {};
+      // Initialize inputs from selected variables
+      const initialInputs: Record<string, number> = {};
       variablesResult.data.forEach(v => {
-        varMap[v.variable_key] = v.variable_value;
+        if (selectedVariables.has(v.variable_key)) {
+          initialInputs[v.variable_key] = v.variable_value;
+        }
       });
 
-      setInputs(prev => ({
-        ...prev,
-        baseCredits: varMap['base_credits'] || prev.baseCredits,
-        creditPrice: varMap['credit_price_usd'] || prev.creditPrice,
-      }));
+      // Add common calculation inputs
+      initialInputs['complexityMultiplier'] = 1.2;
+      initialInputs['agentMultiplier'] = 1.2;
+      initialInputs['scenarioMultiplier'] = 0.8;
+      initialInputs['registrationsPerDay'] = 100;
+      initialInputs['workingDaysPerMonth'] = 22;
+
+      setInputs(initialInputs);
     }
     setLoading(false);
   }
@@ -110,23 +110,43 @@ export default function DebugModeTab() {
     );
   }
 
-  function evaluateFormula(formulaKey: string, context: Record<string, number>): number {
-    const formula = formulas.find(f => f.formula_key === formulaKey);
-    if (!formula) return 0;
-
-    try {
-      const expression = formula.formula_expression
-        .replace(/\[(\w+)\]/g, (_, varName) => {
-          const variable = variables.find(v => v.variable_key === varName);
-          if (variable) return String(variable.variable_value);
-          return context[varName] !== undefined ? String(context[varName]) : '0';
-        });
-
-      return eval(expression);
-    } catch (error) {
-      console.error(`Error evaluating formula ${formulaKey}:`, error);
-      return 0;
+  function toggleVariable(varKey: string) {
+    const newSelected = new Set(selectedVariables);
+    if (newSelected.has(varKey)) {
+      newSelected.delete(varKey);
+      const newInputs = { ...inputs };
+      delete newInputs[varKey];
+      setInputs(newInputs);
+    } else {
+      newSelected.add(varKey);
+      const variable = variables.find(v => v.variable_key === varKey);
+      if (variable) {
+        setInputs({ ...inputs, [varKey]: variable.variable_value });
+      }
     }
+    setSelectedVariables(newSelected);
+  }
+
+  function updateInput(key: string, value: number) {
+    setInputs({ ...inputs, [key]: value });
+  }
+
+  function resetToDefaults() {
+    const defaultInputs: Record<string, number> = {};
+    variables.forEach(v => {
+      if (selectedVariables.has(v.variable_key)) {
+        defaultInputs[v.variable_key] = v.variable_value;
+      }
+    });
+
+    // Add common calculation inputs
+    defaultInputs['complexityMultiplier'] = 1.2;
+    defaultInputs['agentMultiplier'] = 1.2;
+    defaultInputs['scenarioMultiplier'] = 0.8;
+    defaultInputs['registrationsPerDay'] = 100;
+    defaultInputs['workingDaysPerMonth'] = 22;
+
+    setInputs(defaultInputs);
   }
 
   function runCalculation() {
@@ -137,21 +157,29 @@ export default function DebugModeTab() {
     const formulasUsed: string[] = [];
     const variablesUsed: string[] = [];
 
+    const baseCredits = inputs['base_credits'] || inputs['baseCredits'] || 40;
+    const complexityMultiplier = inputs['complexityMultiplier'] || 1.2;
+    const agentMultiplier = inputs['agentMultiplier'] || 1.2;
+    const scenarioMultiplier = inputs['scenarioMultiplier'] || 0.8;
+    const registrationsPerDay = inputs['registrationsPerDay'] || 100;
+    const workingDaysPerMonth = inputs['workingDaysPerMonth'] || 22;
+    const creditPrice = inputs['credit_price_usd'] || inputs['creditPrice'] || 0.008;
+
     // Step 1: Apply Complexity Multiplier
     const complexityFormula = formulas.find(f => f.formula_key === 'apply_complexity_multiplier');
-    const step1Result = inputs.baseCredits * inputs.complexityMultiplier;
+    const step1Result = baseCredits * complexityMultiplier;
 
     steps.push({
       step: 1,
       operation: 'Apply Complexity Multiplier',
-      formula: complexityFormula?.formula_expression || 'baseCredits × complexityMultiplier',
+      formula: complexityFormula?.formula_expression || 'base_credits × complexityMultiplier',
       formula_key: complexityFormula?.formula_key,
       inputs: {
-        baseCredits: inputs.baseCredits,
-        complexityMultiplier: inputs.complexityMultiplier,
+        base_credits: baseCredits,
+        complexityMultiplier,
       },
       result: step1Result,
-      explanation: `Starting with base credits (${inputs.baseCredits}), we multiply by complexity multiplier (${inputs.complexityMultiplier}) to account for workflow complexity.`,
+      explanation: `Starting with base credits (${baseCredits}), we multiply by complexity multiplier (${complexityMultiplier}) to account for workflow complexity.`,
     });
 
     if (complexityFormula) formulasUsed.push(complexityFormula.formula_name);
@@ -159,7 +187,7 @@ export default function DebugModeTab() {
 
     // Step 2: Apply Agent Multiplier
     const agentFormula = formulas.find(f => f.formula_key === 'apply_agent_multiplier');
-    const step2Result = step1Result * inputs.agentMultiplier;
+    const step2Result = step1Result * agentMultiplier;
 
     steps.push({
       step: 2,
@@ -168,10 +196,10 @@ export default function DebugModeTab() {
       formula_key: agentFormula?.formula_key,
       inputs: {
         previousResult: step1Result,
-        agentMultiplier: inputs.agentMultiplier,
+        agentMultiplier,
       },
       result: step2Result,
-      explanation: `We then multiply by agent multiplier (${inputs.agentMultiplier}) to account for multi-agent coordination overhead.`,
+      explanation: `We then multiply by agent multiplier (${agentMultiplier}) to account for multi-agent coordination overhead.`,
     });
 
     if (agentFormula) formulasUsed.push(agentFormula.formula_name);
@@ -179,7 +207,7 @@ export default function DebugModeTab() {
 
     // Step 3: Apply Scenario Multiplier
     const scenarioFormula = formulas.find(f => f.formula_key === 'apply_scenario_multiplier');
-    const creditsPerTransaction = step2Result * inputs.scenarioMultiplier;
+    const creditsPerTransaction = step2Result * scenarioMultiplier;
 
     steps.push({
       step: 3,
@@ -188,10 +216,10 @@ export default function DebugModeTab() {
       formula_key: scenarioFormula?.formula_key,
       inputs: {
         previousResult: step2Result,
-        scenarioMultiplier: inputs.scenarioMultiplier,
+        scenarioMultiplier,
       },
       result: creditsPerTransaction,
-      explanation: `Finally, we apply scenario multiplier (${inputs.scenarioMultiplier}) to adjust for deployment type (optimized/standard/premium).`,
+      explanation: `Finally, we apply scenario multiplier (${scenarioMultiplier}) to adjust for deployment type (optimized/standard/premium).`,
     });
 
     if (scenarioFormula) formulasUsed.push(scenarioFormula.formula_name);
@@ -199,7 +227,7 @@ export default function DebugModeTab() {
 
     // Step 4: Calculate Monthly Credits
     const monthlyFormula = formulas.find(f => f.formula_key === 'calculate_monthly_credits');
-    const monthlyCredits = creditsPerTransaction * inputs.registrationsPerDay * inputs.workingDaysPerMonth;
+    const monthlyCredits = creditsPerTransaction * registrationsPerDay * workingDaysPerMonth;
 
     steps.push({
       step: 4,
@@ -208,30 +236,30 @@ export default function DebugModeTab() {
       formula_key: monthlyFormula?.formula_key,
       inputs: {
         creditsPerTransaction,
-        registrationsPerDay: inputs.registrationsPerDay,
-        workingDaysPerMonth: inputs.workingDaysPerMonth,
+        registrationsPerDay,
+        workingDaysPerMonth,
       },
       result: monthlyCredits,
-      explanation: `Multiply credits per transaction (${creditsPerTransaction.toFixed(2)}) by daily registrations (${inputs.registrationsPerDay}) and working days (${inputs.workingDaysPerMonth}) to get monthly credit consumption.`,
+      explanation: `Multiply credits per transaction (${creditsPerTransaction.toFixed(2)}) by daily registrations (${registrationsPerDay}) and working days (${workingDaysPerMonth}) to get monthly credit consumption.`,
     });
 
     if (monthlyFormula) formulasUsed.push(monthlyFormula.formula_name);
 
     // Step 5: Convert to USD
     const usdFormula = formulas.find(f => f.formula_key === 'credits_to_usd');
-    const monthlyCost = monthlyCredits * inputs.creditPrice;
+    const monthlyCost = monthlyCredits * creditPrice;
 
     steps.push({
       step: 5,
       operation: 'Convert to USD',
-      formula: usdFormula?.formula_expression || 'monthlyCredits × creditPrice',
+      formula: usdFormula?.formula_expression || 'monthlyCredits × credit_price_usd',
       formula_key: usdFormula?.formula_key,
       inputs: {
         monthlyCredits,
-        creditPrice: inputs.creditPrice,
+        credit_price_usd: creditPrice,
       },
       result: monthlyCost,
-      explanation: `Convert monthly credits (${monthlyCredits.toLocaleString()}) to USD by multiplying with credit price ($${inputs.creditPrice}).`,
+      explanation: `Convert monthly credits (${monthlyCredits.toLocaleString()}) to USD by multiplying with credit price ($${creditPrice}).`,
     });
 
     if (usdFormula) formulasUsed.push(usdFormula.formula_name);
@@ -300,14 +328,13 @@ export default function DebugModeTab() {
     }
   }
 
-  const groupedFormulas = formulas.reduce((acc, formula) => {
-    const category = formula.category || 'other';
-    if (!acc[category]) acc[category] = [];
-    acc[category].push(formula);
-    return acc;
-  }, {} as Record<string, Formula[]>);
+  const filteredVariables = variables.filter(v =>
+    v.variable_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    v.variable_key.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (v.description && v.description.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
 
-  const groupedVariables = variables.reduce((acc, variable) => {
+  const groupedVariables = filteredVariables.reduce((acc, variable) => {
     const category = variable.category || 'other';
     if (!acc[category]) acc[category] = [];
     acc[category].push(variable);
@@ -328,158 +355,130 @@ export default function DebugModeTab() {
         <div>
           <h3 className="text-lg font-semibold text-black">Internal Debug Mode</h3>
           <p className="text-sm text-gray-600 mt-1">
-            Step-by-step calculation trace with live formulas and pricing variables
+            Build custom calculations using any pricing variables as inputs
           </p>
         </div>
-        {trace && (
+        <div className="flex items-center gap-2">
           <button
-            onClick={saveTrace}
+            onClick={resetToDefaults}
             className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
           >
-            <Save className="h-4 w-4" />
-            Save Trace
+            <RefreshCw className="h-4 w-4" />
+            Reset to Defaults
           </button>
-        )}
-      </div>
-
-      {/* Tab Navigation */}
-      <div className="border-b border-gray-200">
-        <div className="flex gap-4">
-          <button
-            onClick={() => setActiveTab('trace')}
-            className={`px-4 py-2 font-medium border-b-2 transition-colors ${
-              activeTab === 'trace'
-                ? 'border-black text-black'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />
-              Calculation Trace
-            </div>
-          </button>
-          <button
-            onClick={() => setActiveTab('formulas')}
-            className={`px-4 py-2 font-medium border-b-2 transition-colors ${
-              activeTab === 'formulas'
-                ? 'border-black text-black'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              <Code className="h-4 w-4" />
-              Live Formulas ({formulas.length})
-            </div>
-          </button>
-          <button
-            onClick={() => setActiveTab('variables')}
-            className={`px-4 py-2 font-medium border-b-2 transition-colors ${
-              activeTab === 'variables'
-                ? 'border-black text-black'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            <div className="flex items-center gap-2">
-              <Database className="h-4 w-4" />
-              Pricing Variables ({variables.length})
-            </div>
-          </button>
+          {trace && (
+            <button
+              onClick={saveTrace}
+              className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
+              <Save className="h-4 w-4" />
+              Save Trace
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Calculation Trace Tab */}
-      {activeTab === 'trace' && (
-        <>
+      {/* Two Column Layout */}
+      <div className="grid grid-cols-3 gap-6">
+        {/* Left Column: Variable Selector */}
+        <div className="bg-white border border-gray-200 rounded-lg p-6">
+          <h4 className="font-semibold text-black mb-4 flex items-center gap-2">
+            <Calculator className="h-5 w-5" />
+            Available Variables
+          </h4>
+
+          <div className="relative mb-4">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search variables..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-black focus:border-transparent"
+            />
+          </div>
+
+          <div className="space-y-3 max-h-[500px] overflow-y-auto">
+            {Object.entries(groupedVariables).map(([category, categoryVariables]) => (
+              <div key={category}>
+                <div className="text-xs font-semibold text-gray-500 uppercase mb-2 sticky top-0 bg-white py-1">
+                  {category}
+                </div>
+                <div className="space-y-1">
+                  {categoryVariables.map((variable) => (
+                    <label
+                      key={variable.id}
+                      className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer group"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedVariables.has(variable.variable_key)}
+                        onChange={() => toggleVariable(variable.variable_key)}
+                        className="rounded border-gray-300 text-black focus:ring-black"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-black truncate">
+                          {variable.variable_name}
+                        </div>
+                        <div className="text-xs text-gray-500 truncate">
+                          {variable.variable_key}
+                        </div>
+                      </div>
+                      <div className="text-xs font-mono text-gray-600 bg-gray-100 px-2 py-1 rounded">
+                        {variable.variable_value.toLocaleString(undefined, { maximumFractionDigits: 4 })}
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Right Column: Input Parameters & Calculation */}
+        <div className="col-span-2 space-y-6">
           <div className="bg-white border border-gray-200 rounded-lg p-6">
             <h4 className="font-semibold text-black mb-4">Input Parameters</h4>
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Base Credits
-                </label>
-                <input
-                  type="number"
-                  value={inputs.baseCredits}
-                  onChange={(e) => setInputs({ ...inputs, baseCredits: parseFloat(e.target.value) || 0 })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Complexity Multiplier
-                </label>
-                <input
-                  type="number"
-                  step="0.1"
-                  value={inputs.complexityMultiplier}
-                  onChange={(e) => setInputs({ ...inputs, complexityMultiplier: parseFloat(e.target.value) || 0 })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Agent Multiplier
-                </label>
-                <input
-                  type="number"
-                  step="0.1"
-                  value={inputs.agentMultiplier}
-                  onChange={(e) => setInputs({ ...inputs, agentMultiplier: parseFloat(e.target.value) || 0 })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Scenario Multiplier
-                </label>
-                <input
-                  type="number"
-                  step="0.1"
-                  value={inputs.scenarioMultiplier}
-                  onChange={(e) => setInputs({ ...inputs, scenarioMultiplier: parseFloat(e.target.value) || 0 })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Registrations per Day
-                </label>
-                <input
-                  type="number"
-                  value={inputs.registrationsPerDay}
-                  onChange={(e) => setInputs({ ...inputs, registrationsPerDay: parseFloat(e.target.value) || 0 })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Working Days per Month
-                </label>
-                <input
-                  type="number"
-                  value={inputs.workingDaysPerMonth}
-                  onChange={(e) => setInputs({ ...inputs, workingDaysPerMonth: parseFloat(e.target.value) || 0 })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Credit Price (USD)
-                </label>
-                <input
-                  type="number"
-                  step="0.001"
-                  value={inputs.creditPrice}
-                  onChange={(e) => setInputs({ ...inputs, creditPrice: parseFloat(e.target.value) || 0 })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                />
-              </div>
+            <div className="grid grid-cols-3 gap-4 max-h-[400px] overflow-y-auto">
+              {Object.entries(inputs)
+                .sort(([keyA], [keyB]) => {
+                  // Prioritize selected variables
+                  const aIsVar = selectedVariables.has(keyA);
+                  const bIsVar = selectedVariables.has(keyB);
+                  if (aIsVar && !bIsVar) return -1;
+                  if (!aIsVar && bIsVar) return 1;
+                  return keyA.localeCompare(keyB);
+                })
+                .map(([key, value]) => {
+                  const variable = variables.find(v => v.variable_key === key);
+                  const isVariable = !!variable;
+                  const displayName = variable ? variable.variable_name : key.replace(/([A-Z])/g, ' $1').trim();
+
+                  return (
+                    <div key={key} className={isVariable ? 'border-l-4 border-blue-500 pl-2' : ''}>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {displayName}
+                        {variable?.unit && <span className="text-xs text-gray-500 ml-1">({variable.unit})</span>}
+                      </label>
+                      <input
+                        type="number"
+                        step="any"
+                        value={value}
+                        onChange={(e) => updateInput(key, parseFloat(e.target.value) || 0)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent font-mono text-sm"
+                      />
+                      {variable?.description && (
+                        <p className="text-xs text-gray-500 mt-1">{variable.description}</p>
+                      )}
+                    </div>
+                  );
+                })}
             </div>
 
             <button
               onClick={runCalculation}
               disabled={calculating}
-              className="mt-6 flex items-center gap-2 px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50"
+              className="mt-6 flex items-center gap-2 px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 w-full justify-center"
             >
               <Play className="h-4 w-4" />
               {calculating ? 'Calculating...' : 'Run Calculation'}
@@ -619,95 +618,8 @@ export default function DebugModeTab() {
               </div>
             </div>
           )}
-        </>
-      )}
-
-      {/* Live Formulas Tab */}
-      {activeTab === 'formulas' && (
-        <div className="space-y-6">
-          {Object.entries(groupedFormulas).map(([category, categoryFormulas]) => (
-            <div key={category} className="bg-white border border-gray-200 rounded-lg p-6">
-              <h4 className="font-semibold text-black mb-4 capitalize">{category} Formulas</h4>
-              <div className="space-y-3">
-                {categoryFormulas.map((formula) => (
-                  <div key={formula.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                    <div className="flex items-start justify-between mb-2">
-                      <div>
-                        <h5 className="font-semibold text-black">{formula.formula_name}</h5>
-                        <code className="text-xs bg-gray-100 px-2 py-1 rounded mt-1 inline-block text-blue-600">
-                          {formula.formula_key}
-                        </code>
-                      </div>
-                      <span className={`text-xs px-2 py-1 rounded ${
-                        formula.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
-                      }`}>
-                        {formula.is_active ? 'Active' : 'Inactive'}
-                      </span>
-                    </div>
-                    {formula.description && (
-                      <p className="text-sm text-gray-600 mb-2">{formula.description}</p>
-                    )}
-                    <div className="bg-gray-900 text-green-400 p-3 rounded font-mono text-sm overflow-x-auto">
-                      {formula.formula_expression}
-                    </div>
-                    {formula.variables_used.length > 0 && (
-                      <div className="mt-2">
-                        <span className="text-xs text-gray-600">Variables: </span>
-                        {formula.variables_used.map((varKey, idx) => (
-                          <span key={idx} className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded ml-1">
-                            {varKey}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
         </div>
-      )}
-
-      {/* Pricing Variables Tab */}
-      {activeTab === 'variables' && (
-        <div className="space-y-6">
-          {Object.entries(groupedVariables).map(([category, categoryVariables]) => (
-            <div key={category} className="bg-white border border-gray-200 rounded-lg p-6">
-              <h4 className="font-semibold text-black mb-4 capitalize">{category} Variables</h4>
-              <div className="space-y-2">
-                {categoryVariables.map((variable) => (
-                  <div key={variable.id} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <h5 className="font-semibold text-black">{variable.variable_name}</h5>
-                        <code className="text-xs bg-gray-100 px-2 py-1 rounded text-purple-600">
-                          {variable.variable_key}
-                        </code>
-                        {variable.is_overridden && (
-                          <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-1 rounded">
-                            Overridden
-                          </span>
-                        )}
-                      </div>
-                      {variable.description && (
-                        <p className="text-sm text-gray-600 mt-1">{variable.description}</p>
-                      )}
-                    </div>
-                    <div className="text-right">
-                      <div className="font-mono font-bold text-black text-lg">
-                        {variable.variable_value.toLocaleString(undefined, { maximumFractionDigits: 6 })}
-                      </div>
-                      {variable.unit && (
-                        <div className="text-xs text-gray-500">{variable.unit}</div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      </div>
     </div>
   );
 }
