@@ -60,6 +60,7 @@ export default function DebugModeTab() {
     'credit_price_usd',
   ]));
   const [searchType, setSearchType] = useState<'all' | 'variables' | 'formulas'>('all');
+  const [selectedFormulas, setSelectedFormulas] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     loadFormulasAndVariables();
@@ -128,6 +129,16 @@ export default function DebugModeTab() {
     setSelectedVariables(newSelected);
   }
 
+  function toggleFormula(formulaKey: string) {
+    const newSelected = new Set(selectedFormulas);
+    if (newSelected.has(formulaKey)) {
+      newSelected.delete(formulaKey);
+    } else {
+      newSelected.add(formulaKey);
+    }
+    setSelectedFormulas(newSelected);
+  }
+
   function updateInput(key: string, value: number) {
     setInputs({ ...inputs, [key]: value });
   }
@@ -150,6 +161,37 @@ export default function DebugModeTab() {
     setInputs(defaultInputs);
   }
 
+  function evaluateFormulaExpression(expression: string, context: Record<string, number>): number {
+    try {
+      // Replace [variable_key] with actual values
+      let evaluableExpr = expression;
+
+      // First replace variables from database
+      variables.forEach(v => {
+        const pattern = new RegExp(`\\[${v.variable_key}\\]`, 'g');
+        const value = context[v.variable_key] || v.variable_value;
+        evaluableExpr = evaluableExpr.replace(pattern, String(value));
+      });
+
+      // Then replace any remaining bracketed variables with context values
+      evaluableExpr = evaluableExpr.replace(/\[(\w+)\]/g, (_, varName) => {
+        return String(context[varName] || 0);
+      });
+
+      // Replace common variable names without brackets if present in context
+      Object.keys(context).forEach(key => {
+        const pattern = new RegExp(`\\b${key}\\b`, 'g');
+        evaluableExpr = evaluableExpr.replace(pattern, String(context[key]));
+      });
+
+      // Evaluate the expression safely
+      return Function('"use strict"; return (' + evaluableExpr + ')')();
+    } catch (error) {
+      console.error('Error evaluating formula:', expression, error);
+      return 0;
+    }
+  }
+
   function runCalculation() {
     setCalculating(true);
     const startTime = performance.now();
@@ -157,6 +199,80 @@ export default function DebugModeTab() {
     const steps: CalculationStep[] = [];
     const formulasUsed: string[] = [];
     const variablesUsed: string[] = [];
+    const context: Record<string, number> = { ...inputs };
+
+    // If user selected specific formulas, use those
+    if (selectedFormulas.size > 0) {
+      const selectedFormulasList = formulas.filter(f => selectedFormulas.has(f.formula_key));
+
+      selectedFormulasList.forEach((formula, index) => {
+        const stepNumber = index + 1;
+
+        // Track which variables this formula uses
+        const stepInputs: Record<string, number> = {};
+        formula.variables_used.forEach(varKey => {
+          if (context[varKey] !== undefined) {
+            stepInputs[varKey] = context[varKey];
+          }
+        });
+
+        // Evaluate the formula
+        const result = evaluateFormulaExpression(formula.formula_expression, context);
+
+        // Store result for next formulas to use
+        context[formula.formula_key] = result;
+        context['result'] = result;
+        context['previousResult'] = result;
+
+        steps.push({
+          step: stepNumber,
+          operation: formula.formula_name,
+          formula: formula.formula_expression,
+          formula_key: formula.formula_key,
+          inputs: stepInputs,
+          result,
+          explanation: formula.description || `Applies ${formula.formula_name} to calculate the next value.`,
+        });
+
+        formulasUsed.push(formula.formula_name);
+        variablesUsed.push(...formula.variables_used);
+      });
+
+      // Calculate final metrics if we have the necessary values
+      const creditsPerTransaction = context['result'] || context['creditsPerTransaction'] || 0;
+      const registrationsPerDay = context['biz_txn_per_day'] || context['registrationsPerDay'] || 100;
+      const workingDaysPerMonth = context['biz_working_days'] || context['workingDaysPerMonth'] || 22;
+      const creditPrice = context['credit_price_usd'] || context['creditPrice'] || 0.008;
+
+      const monthlyCredits = creditsPerTransaction * registrationsPerDay * workingDaysPerMonth;
+      const monthlyCost = monthlyCredits * creditPrice;
+      const annualCost = monthlyCost * 12;
+
+      const endTime = performance.now();
+
+      const newTrace: DebugTrace = {
+        trace_name: `Debug Trace - ${new Date().toLocaleString()}`,
+        workflow_description: 'Custom calculation with selected formulas',
+        input_parameters: inputs,
+        calculation_steps: steps,
+        final_results: {
+          creditsPerTransaction,
+          monthlyCredits,
+          monthlyCost,
+          annualCost,
+        },
+        execution_time_ms: Math.round(endTime - startTime),
+        formulas_used: formulasUsed,
+        variables_used: Array.from(new Set(variablesUsed)),
+      };
+
+      setTrace(newTrace);
+      setExpandedSteps(steps.map(s => s.step));
+      setCalculating(false);
+      return;
+    }
+
+    // Otherwise, use default calculation flow
 
     const baseCredits = inputs['base_credits'] || inputs['baseCredits'] || 40;
     const complexityMultiplier = inputs['complexityMultiplier'] || 1.2;
@@ -513,11 +629,17 @@ export default function DebugModeTab() {
                     </div>
                     <div className="space-y-1">
                       {categoryFormulas.map((formula) => (
-                        <div
+                        <label
                           key={formula.id}
-                          className="p-2 hover:bg-gray-50 rounded border border-gray-100"
+                          className="block p-2 hover:bg-gray-50 rounded border border-gray-100 cursor-pointer"
                         >
                           <div className="flex items-start gap-2">
+                            <input
+                              type="checkbox"
+                              checked={selectedFormulas.has(formula.formula_key)}
+                              onChange={() => toggleFormula(formula.formula_key)}
+                              className="mt-1 rounded border-gray-300 text-green-600 focus:ring-green-600"
+                            />
                             <Code className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
                             <div className="flex-1 min-w-0">
                               <div className="text-sm font-medium text-black">
@@ -534,16 +656,27 @@ export default function DebugModeTab() {
                               )}
                               {formula.variables_used.length > 0 && (
                                 <div className="flex flex-wrap gap-1 mt-2">
-                                  {formula.variables_used.map((varKey, idx) => (
-                                    <span key={idx} className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
-                                      {varKey}
-                                    </span>
-                                  ))}
+                                  {formula.variables_used.map((varKey, idx) => {
+                                    const varExists = selectedVariables.has(varKey);
+                                    return (
+                                      <span
+                                        key={idx}
+                                        className={`text-xs px-1.5 py-0.5 rounded ${
+                                          varExists
+                                            ? 'bg-blue-600 text-white'
+                                            : 'bg-blue-100 text-blue-700'
+                                        }`}
+                                        title={varExists ? 'Variable selected as input' : 'Variable not selected'}
+                                      >
+                                        {varKey}
+                                      </span>
+                                    );
+                                  })}
                                 </div>
                               )}
                             </div>
                           </div>
-                        </div>
+                        </label>
                       ))}
                     </div>
                   </div>
@@ -565,7 +698,14 @@ export default function DebugModeTab() {
         {/* Right Column: Input Parameters & Calculation */}
         <div className="col-span-2 space-y-6">
           <div className="bg-white border border-gray-200 rounded-lg p-6">
-            <h4 className="font-semibold text-black mb-4">Input Parameters</h4>
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="font-semibold text-black">Input Parameters</h4>
+              {selectedFormulas.size > 0 && (
+                <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full font-medium">
+                  {selectedFormulas.size} formula{selectedFormulas.size !== 1 ? 's' : ''} selected
+                </span>
+              )}
+            </div>
             <div className="grid grid-cols-3 gap-4 max-h-[400px] overflow-y-auto">
               {Object.entries(inputs)
                 .sort(([keyA], [keyB]) => {
