@@ -144,14 +144,22 @@ export default function DebugModeTab() {
   }
 
   function resetToDefaults() {
+    // Reset to default selected variables
+    const defaultSelectedVars = new Set(['base_credits', 'credit_price_usd']);
+    setSelectedVariables(defaultSelectedVars);
+
+    // Clear selected formulas
+    setSelectedFormulas(new Set());
+
+    // Reset inputs to default values
     const defaultInputs: Record<string, number> = {};
     variables.forEach(v => {
-      if (selectedVariables.has(v.variable_key)) {
+      if (defaultSelectedVars.has(v.variable_key)) {
         defaultInputs[v.variable_key] = v.variable_value;
       }
     });
 
-    // Add common calculation inputs
+    // Add common calculation inputs with default values
     defaultInputs['complexityMultiplier'] = 1.2;
     defaultInputs['agentMultiplier'] = 1.2;
     defaultInputs['scenarioMultiplier'] = 0.8;
@@ -159,6 +167,14 @@ export default function DebugModeTab() {
     defaultInputs['workingDaysPerMonth'] = 22;
 
     setInputs(defaultInputs);
+
+    // Clear trace
+    setTrace(null);
+    setExpandedSteps([]);
+
+    // Clear search
+    setSearchTerm('');
+    setSearchType('all');
   }
 
   function evaluateFormulaExpression(expression: string, context: Record<string, number>): number {
