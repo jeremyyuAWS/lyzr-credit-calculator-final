@@ -9,9 +9,11 @@ interface Formula {
   formula_expression: string;
   description: string | null;
   variables_used: string[];
+  result_unit: string;
   category: string;
   is_active: boolean;
-  version: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
 interface PricingVariable {
@@ -64,7 +66,7 @@ export default function FormulaEditorTab({ onDebugFormula }: FormulaEditorTabPro
   async function loadFormulas() {
     setLoading(true);
     const { data, error } = await supabase
-      .from('formula_definitions')
+      .from('business_formulas')
       .select('*')
       .order('category', { ascending: true })
       .order('formula_name', { ascending: true });
@@ -95,10 +97,10 @@ export default function FormulaEditorTab({ onDebugFormula }: FormulaEditorTabPro
       formula_key: '',
       formula_expression: '',
       description: '',
-      category: 'core',
+      result_unit: 'USD',
+      category: 'cost',
       variables_used: [],
       is_active: true,
-      version: 1,
     });
   }
 
@@ -108,16 +110,16 @@ export default function FormulaEditorTab({ onDebugFormula }: FormulaEditorTabPro
       const variablesUsed = extractVariablesFromExpression(editForm.formula_expression || '');
 
       const { error } = await supabase
-        .from('formula_definitions')
+        .from('business_formulas')
         .insert({
           formula_name: editForm.formula_name,
           formula_key: formulaKey,
           formula_expression: editForm.formula_expression,
           description: editForm.description,
+          result_unit: editForm.result_unit || 'USD',
           category: editForm.category,
           variables_used: variablesUsed,
           is_active: true,
-          version: 1,
         });
 
       if (error) {
@@ -131,11 +133,12 @@ export default function FormulaEditorTab({ onDebugFormula }: FormulaEditorTabPro
       const variablesUsed = extractVariablesFromExpression(editForm.formula_expression || '');
 
       const { error } = await supabase
-        .from('formula_definitions')
+        .from('business_formulas')
         .update({
           formula_name: editForm.formula_name,
           formula_expression: editForm.formula_expression,
           description: editForm.description,
+          result_unit: editForm.result_unit || 'USD',
           category: editForm.category,
           variables_used: variablesUsed,
           updated_at: new Date().toISOString(),
@@ -204,7 +207,7 @@ export default function FormulaEditorTab({ onDebugFormula }: FormulaEditorTabPro
     if (!confirm('Are you sure you want to delete this formula?')) return;
 
     const { error } = await supabase
-      .from('formula_definitions')
+      .from('business_formulas')
       .delete()
       .eq('id', id);
 
@@ -217,7 +220,7 @@ export default function FormulaEditorTab({ onDebugFormula }: FormulaEditorTabPro
 
   async function toggleActive(id: string, currentState: boolean) {
     const { error } = await supabase
-      .from('formula_definitions')
+      .from('business_formulas')
       .update({ is_active: !currentState })
       .eq('id', id);
 
