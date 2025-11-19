@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ChevronRight, ChevronLeft, Check, Mail, Info } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Check, Mail, Info, Loader2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 interface UseCase {
@@ -46,11 +46,18 @@ export default function GuidedSetup() {
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [userEmail, setUserEmail] = useState('');
   const [sliderFeedback, setSliderFeedback] = useState('');
+  const [emailButtonState, setEmailButtonState] = useState<'idle' | 'loading' | 'success'>('idle');
 
   useEffect(() => {
     loadData();
     trackEvent('guided_setup_started', {});
   }, []);
+
+  useEffect(() => {
+    if (showEmailModal) {
+      setEmailButtonState('idle');
+    }
+  }, [showEmailModal]);
 
   async function loadData() {
     const [useCasesResult, capabilitiesResult] = await Promise.all([
@@ -142,7 +149,9 @@ export default function GuidedSetup() {
   }
 
   async function handleEmailCapture() {
-    if (!userEmail.trim()) return;
+    if (!userEmail.trim() || emailButtonState === 'loading') return;
+
+    setEmailButtonState('loading');
 
     const summary = calculateCost();
 
@@ -158,8 +167,12 @@ export default function GuidedSetup() {
 
     trackEvent('email_captured', { email: userEmail, cost: summary.cost });
 
-    alert('Quote sent! Check your email for your personalized cost analysis.');
-    setShowEmailModal(false);
+    setEmailButtonState('success');
+
+    setTimeout(() => {
+      setShowEmailModal(false);
+      setEmailButtonState('idle');
+    }, 2000);
   }
 
   const canProceed = (step: number) => {
@@ -490,14 +503,23 @@ export default function GuidedSetup() {
             <div className="flex gap-3">
               <button
                 onClick={handleEmailCapture}
-                disabled={!userEmail.trim()}
-                className="flex-1 px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+                disabled={!userEmail.trim() || emailButtonState === 'loading'}
+                className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 rounded-lg font-semibold disabled:opacity-50 disabled:cursor-not-allowed ${
+                  emailButtonState === 'success'
+                    ? 'bg-green-600 hover:bg-green-600 cursor-default text-white scale-105 transition-all duration-200'
+                    : 'bg-black text-white hover:bg-gray-800 transition-colors duration-200'
+                }`}
               >
-                Send Quote
+                {emailButtonState === 'loading' && <Loader2 className="h-5 w-5 animate-spin" />}
+                {emailButtonState === 'success' && <Check className="h-5 w-5" />}
+                {emailButtonState === 'idle' && 'Send Quote'}
+                {emailButtonState === 'loading' && 'Sending...'}
+                {emailButtonState === 'success' && 'Sent!'}
               </button>
               <button
                 onClick={() => setShowEmailModal(false)}
-                className="px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                disabled={emailButtonState === 'loading'}
+                className="px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
               >
                 Cancel
               </button>
