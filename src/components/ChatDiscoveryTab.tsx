@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Plus, MessageCircle, Send, Trash2, Copy, ArrowRight, Loader, Edit2, Folder, FolderPlus, ChevronDown, ChevronRight, MoreVertical, Sparkles, Bot, Play, Pause, FastForward, Rewind, RotateCcw } from 'lucide-react';
+import { Plus, MessageCircle, Send, Trash2, Copy, ArrowRight, Loader, Edit2, Folder, FolderPlus, ChevronDown, ChevronRight, MoreVertical, Sparkles, Bot, Play, Pause, FastForward, Rewind, RotateCcw, Zap, TrendingUp } from 'lucide-react';
 import { supabase, ChatSession, ChatMessage, ChatFolder } from '../lib/supabase';
 import {
   initializeConversation,
@@ -808,6 +808,66 @@ export default function ChatDiscoveryTab({ onComplete }: ChatDiscoveryTabProps) 
     onComplete(config);
   }
 
+  async function skipWithAssumptions() {
+    if (!activeSessionId) return;
+
+    // Create default assumptions for typical use case
+    const defaultConfig: Partial<WorkflowConfig> = {
+      workflow_description: "General AI Workflow (Estimated with Default Assumptions)",
+      recommended_model: "gpt-4",
+      complexity_tier: "Medium",
+      emails_per_month: 1000,
+      chats_per_month: 500,
+      voice_calls_per_month: 0,
+      docs_per_month: 100,
+      workflow_triggers_per_day: 50,
+      steps_per_workflow: 3,
+      agent_interactions: 2,
+      rag_lookups: 5,
+      tool_calls: 2,
+      db_queries: 3,
+      memory_ops: 10,
+      reflection_runs: 0,
+      web_fetches: 1,
+      deep_crawl_pages: 0,
+      avg_input_tokens: 500,
+      avg_output_tokens: 300,
+      inter_agent_tokens: 200,
+      num_agents: 1,
+      num_knowledge_bases: 1,
+    };
+
+    // Mark session as completed with assumptions
+    await supabase
+      .from('chat_sessions')
+      .update({
+        status: 'completed',
+        workflow_description: 'Skipped to calculator with intelligent defaults',
+        extracted_data: defaultConfig,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', activeSessionId);
+
+    const skipMessage: Partial<ChatMessage> = {
+      session_id: activeSessionId,
+      role: 'ai',
+      message: `Got it! I'll set up the calculator with intelligent default assumptions:\n\n✅ Medium complexity workflow\n✅ 1,000 emails/month, 500 chats/month\n✅ Basic RAG and tool usage\n✅ GPT-4 model\n\nYou can adjust all these values in the calculator to match your actual needs!`,
+      metadata: { is_completion: true, skipped: true },
+    };
+
+    const { data, error } = await supabase
+      .from('chat_messages')
+      .insert([skipMessage])
+      .select()
+      .single();
+
+    if (!error && data) {
+      setMessages(prev => [...prev, data]);
+    }
+
+    onComplete(defaultConfig);
+  }
+
   const currentQuestion = getNextQuestion(conversationState);
   const hasCompletionMessage = messages.some(m => m.metadata?.is_completion === true);
   const isCompleted = ((!currentQuestion && messages.length > 0) || hasCompletionMessage) && !isPlayingDemo;
@@ -1037,6 +1097,24 @@ export default function ChatDiscoveryTab({ onComplete }: ChatDiscoveryTabProps) 
       <div className="flex-1 flex flex-col">
         {activeSessionId ? (
           <>
+            {!isCompleted && messages.length > 0 && !isPlayingDemo && (
+              <div className="bg-white border-b border-gray-200 p-4">
+                <div className="max-w-3xl mx-auto">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-medium text-gray-600">Discovery Progress</span>
+                    <span className="text-xs font-medium text-gray-900">
+                      {Math.min(messages.length, 10)} of ~10 questions
+                    </span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-gradient-to-r from-blue-500 to-cyan-500 h-2 rounded-full transition-all duration-500"
+                      style={{ width: `${Math.min((messages.length / 10) * 100, 100)}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
             <div className="flex-1 overflow-y-auto p-6 space-y-4">
               {messages.map((msg) => (
                 <div
@@ -1071,6 +1149,21 @@ export default function ChatDiscoveryTab({ onComplete }: ChatDiscoveryTabProps) 
             </div>
 
             <div className="p-6 bg-white border-t border-gray-200">
+              {!isCompleted && messages.length > 0 && !isPlayingDemo && (
+                <div className="mb-4">
+                  <button
+                    onClick={skipWithAssumptions}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 text-amber-900 rounded-xl hover:from-amber-100 hover:to-orange-100 transition-all font-medium text-sm shadow-sm"
+                  >
+                    <Zap className="h-4 w-4" />
+                    Skip to Calculator (with intelligent defaults)
+                    <TrendingUp className="h-4 w-4" />
+                  </button>
+                  <p className="text-xs text-gray-500 text-center mt-2">
+                    Not sure? We'll make smart assumptions you can adjust later
+                  </p>
+                </div>
+              )}
               {!useLyzrAgent && !isPlayingDemo && !isCompleted && (
                 <div className="mb-6">
                   <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
@@ -1314,17 +1407,26 @@ export default function ChatDiscoveryTab({ onComplete }: ChatDiscoveryTabProps) 
             </div>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center">
-              <MessageCircle className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">No conversation selected</h3>
-              <p className="text-gray-600 mb-6">Start a new conversation to begin</p>
-              <button
-                onClick={createNewSession}
-                className="px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition-all"
-              >
-                Start New Conversation
-              </button>
+          <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-gray-50 to-white p-8">
+            <div className="text-center max-w-md">
+              <div className="bg-white rounded-2xl shadow-lg p-8 border border-gray-200">
+                <MessageCircle className="h-16 w-16 text-blue-500 mx-auto mb-4" />
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">Ready to Discover Your Costs?</h3>
+                <p className="text-gray-600 mb-6">
+                  I'll ask a few questions about your AI workflow to provide accurate cost estimates. It takes about 2-3 minutes.
+                </p>
+                <button
+                  onClick={createNewSession}
+                  className="w-full px-6 py-4 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-xl hover:from-blue-700 hover:to-cyan-700 transition-all font-semibold shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+                >
+                  <Sparkles className="h-5 w-5" />
+                  Start New Conversation
+                  <ArrowRight className="h-5 w-5" />
+                </button>
+                <p className="text-xs text-gray-500 mt-4">
+                  Or try a demo scenario from the left sidebar
+                </p>
+              </div>
             </div>
           </div>
         )}

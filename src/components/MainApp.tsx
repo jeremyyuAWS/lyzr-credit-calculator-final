@@ -16,6 +16,7 @@ export default function MainApp() {
   const [workflowConfig, setWorkflowConfig] = useState<Partial<WorkflowConfig> | null>(null);
   const [showWelcomeModal, setShowWelcomeModal] = useState(false);
   const [guidedSetupStep, setGuidedSetupStep] = useState(0);
+  const [chatCompleted, setChatCompleted] = useState(false);
 
   useEffect(() => {
     const hasSeenWelcome = localStorage.getItem('lyzr_calculator_welcome_seen');
@@ -27,6 +28,7 @@ export default function MainApp() {
 
   function handleChatComplete(config: Partial<WorkflowConfig>) {
     setWorkflowConfig(config);
+    setChatCompleted(true);
     setActiveTab('business-calculator');
   }
 
@@ -75,16 +77,18 @@ export default function MainApp() {
                 >
                   Chat Discovery
                 </button>
-                <button
-                  onClick={() => setActiveTab('business-calculator')}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                    activeTab === 'business-calculator'
-                      ? 'border-black text-black'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  Business Calculator
-                </button>
+                {(chatCompleted || activeTab === 'business-calculator') && (
+                  <button
+                    onClick={() => setActiveTab('business-calculator')}
+                    className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                      activeTab === 'business-calculator'
+                        ? 'border-black text-black'
+                        : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                    }`}
+                  >
+                    Business Calculator
+                  </button>
+                )}
               </>
             )}
             <button
