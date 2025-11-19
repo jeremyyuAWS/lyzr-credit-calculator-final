@@ -1,5 +1,354 @@
-For all designs I ask you to make, have them be beautiful, not cookie cutter. Make webpages that are fully featured and worthy for production.
+yzr demos must feel:
 
-By default, this template supports JSX syntax with Tailwind CSS classes, React hooks, and Lucide React for icons. Do not install other packages for UI themes, icons, etc unless absolutely necessary or I request them.
+Clean
 
-Use icons from lucide-react for logos.
+Minimal
+
+Premium
+
+Fast
+
+Business-friendly
+
+Zero-friction
+
+Visually modern with liquid glass elements
+
+Every demo must work instantly without explanation and reflect the quality of the platform.
+
+1.1 Our Style
+
+White or black background
+
+Subtle gradients
+
+Liquid glass panels (translucent, blurred, rounded)
+
+Soft shadows
+
+Lots of whitespace
+
+Consistent spacing
+
+No clutter
+
+No unnecessary UI
+
+1.2 Our UX Priorities
+
+Make the user feel smart, not confused
+
+Guide them step-by-step, small decisions at a time
+
+Never surprise them with noise or popups
+
+Make the end-to-end flow delightful
+
+Every click should give feedback
+
+Default to "guided" unless user explicitly picks "chat"
+
+🎨 2. Visual Components & Styling Patterns
+2.1 Liquid Glass Panels (Standard)
+
+Use Tailwind + backdrop blur (recommended over heavy libraries):
+
+<div className="
+  bg-white/10 
+  backdrop-blur-xl 
+  rounded-2xl 
+  border border-white/20 
+  shadow-lg 
+  p-6
+">
+
+2.2 Add Liquid Shine Layer (Optional Premium)
+<div className="absolute inset-0 bg-gradient-to-br from-white/20 via-white/5 to-transparent rounded-2xl pointer-events-none" />
+
+2.3 Cards
+
+Use:
+
+rounded-xl
+
+border border-gray-200/60
+
+shadow-sm
+
+p-4 to p-6
+
+2.4 Buttons
+
+Primary CTA → Blue/Purple
+Success state → Green + checkmark
+Padding → px-4 py-2
+Radius → rounded-lg
+
+2.5 Spacing
+
+Use consistent spacing:
+
+Padding: 24px
+
+Gaps: 16–24px
+
+Section spacing: 32–48px
+
+⚡ 3. Interaction Rules (Critical)
+3.1 NEVER Use Browser Alerts
+
+Absolutely banned:
+
+alert()
+
+confirm()
+
+prompt()
+
+They feel cheap, break immersion, and ruin the premium look.
+
+3.2 Inline Confirmation Pattern (MANDATORY)
+
+Every user-triggered action follows the same 3-step button lifecycle:
+
+Default
+
+Send Quote
+
+Loading
+
+Sending…
+
+Show spinner
+
+Disable button
+
+Tint button slightly
+
+Success
+
+Button turns green (bg-green-600)
+
+Icon: Check
+
+Text changes to “Sent!”
+
+150–200ms scale animation
+
+Optionally revert after 2–3 seconds
+
+This replaces all popups.
+
+Standard code pattern:
+
+const [state, setState] = useState("idle"); 
+// idle | loading | success | error
+
+<Button
+  disabled={state === "loading"}
+  className={cn(
+    "transition-all duration-200",
+    state === "success" && "bg-green-600 hover:bg-green-600 cursor-default"
+  )}
+>
+  {state === "loading" && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+  {state === "success" && <Check className="mr-2 h-4 w-4" />}
+  {state === "idle" && "Send Quote"}
+  {state === "loading" && "Sending…"}
+  {state === "success" && "Sent!"}
+</Button>
+
+3.3 Errors are Inline, Not Popups
+
+Errors appear directly under the button:
+
+Red text
+
+1–2 lines max
+
+Clear action: “Please enter a valid email.”
+
+🧮 4. Guided Setup Workflow (Standard Lyzr Pattern)
+
+Any concept demo that requires input → use guided flow.
+
+Mandated Steps:
+
+Step 1 — Select Use Case
+Large cards, simple icons, one-click.
+
+Step 2 — Select Requirements
+Checkboxes with tooltips.
+Never long sentences.
+
+Step 3 — Adjust Volumes (Sliders)
+Low default ranges (0–20k).
+Confirm selection inline:
+“Nice — 3,000 emails selected.”
+
+Step 4 — See Cost Summary
+Show only:
+
+Credits/month
+
+$/month
+Hide token math by default.
+
+Final — Email Me This Quote
+Sticky CTA top-right + bottom bar.
+
+💬 5. Chat Mode UX (If Used)
+
+Always include left sidebar for sessions
+
+Use streaming responses
+
+Keep chat input minimal
+
+Use toolbars sparingly
+
+Maintain white space
+
+Add “Try asking…” suggestions to reduce cognitive load
+
+📝 6. Welcome Modal Pattern
+Must Appear On First Load
+
+Users choose:
+
+A. Guided Setup (Recommended)
+B. Chat Discovery
+
+If user closes modal → default to Guided Setup.
+
+Modal Visual Requirements
+
+Liquid glass
+
+Centered
+
+Two cards
+
+Icons
+
+Smooth fade-in (150–200ms)
+
+🧠 7. Behavior Principles
+7.1 No Dead Ends
+
+Every page must have:
+
+A back button
+
+A clear next step
+
+7.2 Reduce Text
+
+Max 10–12 words per sentence in UI.
+
+7.3 Frequent Micro-Feedback
+
+Example:
+“3,000 emails selected”
+“RAG enabled”
+“Memory on”
+
+7.4 Premium Animations
+
+Use Framer Motion:
+
+100–150ms
+
+Ease-out
+
+Small, subtle, never gimmicky
+
+📐 8. Layout Standards
+
+Most demos follow the 3-panel layout:
+
+Left Panel:
+Sessions, navigation, admin, settings.
+
+Center Panel:
+Main experience (chat or wizard).
+
+Right Panel:
+Agent actions, cost breakdown, metadata.
+
+🧩 9. Reusable Blocks to Always Include
+
+Guided Setup Wizard
+
+Chat Mode (optional)
+
+Top-right “Settings”
+
+Top-right “Switch Mode”
+
+Left Panel Sessions
+
+Inline Success Buttons
+
+Email Capture
+
+Liquid Glass Cards
+
+Sticky Summary Bars
+
+Tooltips on every technical term
+
+🚀 10. Performance Standards
+
+Local state over unnecessary API calls
+
+No network calls on every slider move
+
+Debounce 300–500ms for calculations
+
+Lazy-load heavy components
+
+Minimize re-renders
+
+📦 11. Personas to Support
+
+AE (needs clarity, simplicity, shareable output)
+
+PM (needs structure)
+
+VP/Exec (needs trust)
+
+Builder (needs chat flexibility)
+
+Guided Setup is for all.
+Chat mode is optional for builders.
+
+🧱 12. Code Quality Expectations
+
+Functional components
+
+Clear state machine naming
+
+Use reusable components for wizard steps
+
+Extract button state logic into hook if reused (optional)
+
+🎯 13. Final Principles
+
+No popups.
+
+Use inline success.
+
+Use liquid glass.
+
+Guide the user.
+
+Premium visuals.
+
+Minimal text.
+
+Rapid feedback.
+
+Structured flows.
+
+Consistent patterns across demos.
