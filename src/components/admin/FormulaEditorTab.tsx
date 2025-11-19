@@ -43,6 +43,8 @@ export default function FormulaEditorTab({ onDebugFormula }: FormulaEditorTabPro
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [filteredVariables, setFilteredVariables] = useState<PricingVariable[]>([]);
   const [cursorPosition, setCursorPosition] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -269,6 +271,32 @@ export default function FormulaEditorTab({ onDebugFormula }: FormulaEditorTabPro
 
   const categories = Array.from(new Set(formulas.map(f => f.category)));
 
+  // Filter formulas based on search and category
+  const filteredFormulas = formulas.filter(formula => {
+    const matchesSearch = searchQuery === '' ||
+      formula.formula_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      formula.formula_key.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      formula.formula_expression.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (formula.description && formula.description.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    const matchesCategory = selectedCategory === 'all' || formula.category === selectedCategory;
+
+    return matchesSearch && matchesCategory;
+  });
+
+  const getCategoryColor = (category: string) => {
+    const colors: Record<string, string> = {
+      setup: 'bg-blue-100 text-blue-800',
+      llm: 'bg-purple-100 text-purple-800',
+      features: 'bg-green-100 text-green-800',
+      volume: 'bg-orange-100 text-orange-800',
+      cost: 'bg-red-100 text-red-800',
+      pricing: 'bg-yellow-100 text-yellow-800',
+      business: 'bg-indigo-100 text-indigo-800',
+    };
+    return colors[category] || 'bg-gray-100 text-gray-800';
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -305,7 +333,7 @@ export default function FormulaEditorTab({ onDebugFormula }: FormulaEditorTabPro
             </button>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Formula Name *
@@ -323,17 +351,36 @@ export default function FormulaEditorTab({ onDebugFormula }: FormulaEditorTabPro
                 Category *
               </label>
               <select
-                value={editForm.category || 'core'}
+                value={editForm.category || 'cost'}
                 onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
               >
-                <option value="core">Core</option>
-                <option value="tokens">Tokens</option>
-                <option value="features">Features</option>
-                <option value="agents">Agents</option>
                 <option value="setup">Setup</option>
+                <option value="llm">LLM</option>
+                <option value="features">Features</option>
+                <option value="volume">Volume</option>
+                <option value="cost">Cost</option>
+                <option value="pricing">Pricing</option>
                 <option value="business">Business</option>
-                <option value="optimization">Optimization</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Result Unit *
+              </label>
+              <select
+                value={editForm.result_unit || 'USD'}
+                onChange={(e) => setEditForm({ ...editForm, result_unit: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+              >
+                <option value="USD">USD ($)</option>
+                <option value="credits">Credits</option>
+                <option value="percentage">Percentage (%)</option>
+                <option value="multiplier">Multiplier (x)</option>
+                <option value="count">Count</option>
+                <option value="transactions">Transactions</option>
+                <option value="tokens">Tokens</option>
+                <option value="months">Months</option>
               </select>
             </div>
           </div>
@@ -476,13 +523,102 @@ export default function FormulaEditorTab({ onDebugFormula }: FormulaEditorTabPro
         </div>
       )}
 
+      {/* Search and Filter Bar */}
+      <div className="bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200 rounded-xl p-4 space-y-3">
+        <div className="flex gap-3">
+          <div className="flex-1">
+            <input
+              type="text"
+              placeholder="Search formulas by name, key, expression, or description..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+            />
+          </div>
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent bg-white"
+          >
+            <option value="all">All Categories ({formulas.length})</option>
+            {categories.map(cat => (
+              <option key={cat} value={cat}>
+                {cat.charAt(0).toUpperCase() + cat.slice(1)} ({formulas.filter(f => f.category === cat).length})
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Category Pills */}
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setSelectedCategory('all')}
+            className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
+              selectedCategory === 'all'
+                ? 'bg-black text-white'
+                : 'bg-white text-gray-700 border border-gray-300 hover:border-gray-400'
+            }`}
+          >
+            All ({formulas.length})
+          </button>
+          {categories.map(cat => (
+            <button
+              key={cat}
+              onClick={() => setSelectedCategory(cat)}
+              className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-all ${
+                selectedCategory === cat
+                  ? getCategoryColor(cat) + ' ring-2 ring-offset-1 ring-black'
+                  : getCategoryColor(cat) + ' opacity-60 hover:opacity-100'
+              }`}
+            >
+              {cat.charAt(0).toUpperCase() + cat.slice(1)} ({formulas.filter(f => f.category === cat).length})
+            </button>
+          ))}
+        </div>
+
+        {searchQuery && (
+          <div className="text-sm text-gray-600">
+            Found {filteredFormulas.length} formula{filteredFormulas.length !== 1 ? 's' : ''} matching "{searchQuery}"
+          </div>
+        )}
+      </div>
+
+      {/* Empty State */}
+      {filteredFormulas.length === 0 && (
+        <div className="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
+          <div className="text-gray-400 mb-2">
+            <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+            </svg>
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-1">No formulas found</h3>
+          <p className="text-gray-500">
+            {searchQuery ? 'Try adjusting your search terms' : 'Get started by creating your first formula'}
+          </p>
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="mt-3 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
+            >
+              Clear Search
+            </button>
+          )}
+        </div>
+      )}
+
       {categories.map(category => {
-        const categoryFormulas = formulas.filter(f => f.category === category);
+        const categoryFormulas = filteredFormulas.filter(f => f.category === category);
+        if (categoryFormulas.length === 0) return null;
         return (
           <div key={category} className="space-y-3">
-            <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
-              {category}
-            </h4>
+            <div className="flex items-center gap-3 pb-2 border-b-2 border-gray-200">
+              <span className={`px-3 py-1.5 text-sm font-bold rounded-lg ${getCategoryColor(category)}`}>
+                {category.charAt(0).toUpperCase() + category.slice(1)}
+              </span>
+              <span className="text-sm text-gray-500">
+                {categoryFormulas.length} formula{categoryFormulas.length !== 1 ? 's' : ''}
+              </span>
+            </div>
             <div className="space-y-2">
               {categoryFormulas.map(formula => (
                 <div
@@ -491,7 +627,7 @@ export default function FormulaEditorTab({ onDebugFormula }: FormulaEditorTabPro
                 >
                   {editingId === formula.id ? (
                     <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-3 gap-4">
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
                             Formula Name
@@ -507,12 +643,38 @@ export default function FormulaEditorTab({ onDebugFormula }: FormulaEditorTabPro
                           <label className="block text-sm font-medium text-gray-700 mb-1">
                             Category
                           </label>
-                          <input
-                            type="text"
+                          <select
                             value={editForm.category || ''}
                             onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
-                          />
+                          >
+                            <option value="setup">Setup</option>
+                            <option value="llm">LLM</option>
+                            <option value="features">Features</option>
+                            <option value="volume">Volume</option>
+                            <option value="cost">Cost</option>
+                            <option value="pricing">Pricing</option>
+                            <option value="business">Business</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Result Unit
+                          </label>
+                          <select
+                            value={editForm.result_unit || 'USD'}
+                            onChange={(e) => setEditForm({ ...editForm, result_unit: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-black focus:border-transparent"
+                          >
+                            <option value="USD">USD ($)</option>
+                            <option value="credits">Credits</option>
+                            <option value="percentage">Percentage (%)</option>
+                            <option value="multiplier">Multiplier (x)</option>
+                            <option value="count">Count</option>
+                            <option value="transactions">Transactions</option>
+                            <option value="tokens">Tokens</option>
+                            <option value="months">Months</option>
+                          </select>
                         </div>
                       </div>
 
@@ -561,15 +723,18 @@ export default function FormulaEditorTab({ onDebugFormula }: FormulaEditorTabPro
                     <div>
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex-1">
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-3 flex-wrap">
                             <h5 className="font-semibold text-black">{formula.formula_name}</h5>
                             <span className={`px-2 py-1 text-xs font-medium rounded ${
                               formula.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                             }`}>
                               {formula.is_active ? 'Active' : 'Inactive'}
                             </span>
-                            <span className="px-2 py-1 text-xs font-medium rounded bg-blue-100 text-blue-800">
-                              v{formula.version}
+                            <span className="px-2 py-1 text-xs font-medium rounded bg-purple-100 text-purple-800">
+                              {formula.result_unit}
+                            </span>
+                            <span className="text-xs text-gray-500 font-mono">
+                              {formula.formula_key}
                             </span>
                           </div>
                           {formula.description && (
