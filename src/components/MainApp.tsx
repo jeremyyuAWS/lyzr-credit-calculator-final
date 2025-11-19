@@ -1,20 +1,39 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import BusinessSlidersTab from './BusinessSlidersTab';
 import ChatDiscoveryTab from './ChatDiscoveryTab';
+import GuidedSetup from './GuidedSetup';
+import WelcomeModal from './WelcomeModal';
 import Header from './Header';
 import AdminPanel from './AdminPanel';
 import type { WorkflowConfig } from './BusinessSlidersTab';
 
-type TabType = 'chat-discovery' | 'business-calculator';
+type TabType = 'guided-setup' | 'chat-discovery' | 'business-calculator';
 
 export default function MainApp() {
-  const [activeTab, setActiveTab] = useState<TabType>('chat-discovery');
+  const [activeTab, setActiveTab] = useState<TabType>('guided-setup');
   const [adminOpen, setAdminOpen] = useState(false);
   const [workflowConfig, setWorkflowConfig] = useState<Partial<WorkflowConfig> | null>(null);
+  const [showWelcomeModal, setShowWelcomeModal] = useState(false);
+
+  useEffect(() => {
+    const hasSeenWelcome = localStorage.getItem('lyzr_calculator_welcome_seen');
+    if (!hasSeenWelcome) {
+      setShowWelcomeModal(true);
+      localStorage.setItem('lyzr_calculator_welcome_seen', 'true');
+    }
+  }, []);
 
   function handleChatComplete(config: Partial<WorkflowConfig>) {
     setWorkflowConfig(config);
     setActiveTab('business-calculator');
+  }
+
+  function handleModeSelect(mode: 'guided' | 'chat') {
+    if (mode === 'guided') {
+      setActiveTab('guided-setup');
+    } else {
+      setActiveTab('chat-discovery');
+    }
   }
 
   return (
@@ -32,6 +51,16 @@ export default function MainApp() {
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-6">
           <nav className="flex space-x-8" aria-label="Tabs">
+            <button
+              onClick={() => setActiveTab('guided-setup')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                activeTab === 'guided-setup'
+                  ? 'border-black text-black'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Guided Setup
+            </button>
             <button
               onClick={() => setActiveTab('chat-discovery')}
               className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
@@ -58,9 +87,17 @@ export default function MainApp() {
 
       {/* Tab Content */}
       <div>
+        {activeTab === 'guided-setup' && <GuidedSetup />}
         {activeTab === 'chat-discovery' && <ChatDiscoveryTab onComplete={handleChatComplete} />}
         {activeTab === 'business-calculator' && <BusinessSlidersTab initialWorkflow={workflowConfig || undefined} />}
       </div>
+
+      {/* Welcome Modal */}
+      <WelcomeModal
+        isOpen={showWelcomeModal}
+        onClose={() => setShowWelcomeModal(false)}
+        onSelectMode={handleModeSelect}
+      />
 
       {/* Admin Panel */}
       <AdminPanel isOpen={adminOpen} onClose={() => setAdminOpen(false)} />
