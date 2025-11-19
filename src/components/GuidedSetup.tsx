@@ -433,15 +433,24 @@ export default function GuidedSetup({ onStepChange, onModeSelect }: GuidedSetupP
           <div className="mb-8">
             <div className="flex items-center justify-between mb-4">
               <h1 className="text-3xl font-bold text-black">Guided Setup</h1>
-              {currentStep >= 4 && (
+              <div className="flex items-center gap-3">
                 <button
-                  onClick={() => setShowEmailModal(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
+                  onClick={() => setShowResetConfirm(true)}
+                  className="flex items-center gap-2 px-4 py-2 border-2 border-gray-300 text-gray-700 rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-colors"
                 >
-                  <Mail className="h-4 w-4" />
-                  Email me this quote
+                  <RotateCcw className="h-4 w-4" />
+                  Start Over
                 </button>
-              )}
+                {currentStep >= 4 && (
+                  <button
+                    onClick={() => setShowEmailModal(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
+                  >
+                    <Mail className="h-4 w-4" />
+                    Email me this quote
+                  </button>
+                )}
+              </div>
             </div>
 
             <div className="flex items-center gap-3">

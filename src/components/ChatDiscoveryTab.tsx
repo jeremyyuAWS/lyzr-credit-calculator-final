@@ -825,6 +825,13 @@ export default function ChatDiscoveryTab({ onComplete }: ChatDiscoveryTabProps) 
             <FolderPlus className="h-4 w-4" />
             New Folder
           </button>
+          <button
+            onClick={() => window.location.reload()}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-white border-2 border-gray-300 text-gray-700 rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-all text-sm"
+          >
+            <RotateCcw className="h-4 w-4" />
+            Start Over
+          </button>
 
           <div className="pt-2 border-t border-gray-200">
             <div className="flex items-center justify-between mb-2">

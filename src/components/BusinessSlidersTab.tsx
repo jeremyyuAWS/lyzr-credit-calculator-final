@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { TrendingUp, Settings, DollarSign, Info, Calendar, Zap, Sliders, Globe } from 'lucide-react';
+import { TrendingUp, Settings, DollarSign, Info, Calendar, Zap, Sliders, Globe, RotateCcw } from 'lucide-react';
 import VolumeSliders from './sliders/VolumeSliders';
 import ComplexitySliders from './sliders/ComplexitySliders';
 import TokenControls from './sliders/TokenControls';
@@ -316,6 +316,15 @@ export default function BusinessSlidersTab({ initialWorkflow }: BusinessSlidersT
               <p className="text-gray-600 mt-1">Adjust volumes and features to estimate your monthly AI costs</p>
             </div>
             <div className="flex items-center gap-3">
+              {/* Start Over Button */}
+              <button
+                onClick={() => window.location.reload()}
+                className="flex items-center gap-2 px-4 py-2 border-2 border-gray-300 text-gray-700 rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-colors"
+              >
+                <RotateCcw className="h-4 w-4" />
+                Start Over
+              </button>
+
               {/* Currency Selector */}
               <div className="relative">
                 <select
