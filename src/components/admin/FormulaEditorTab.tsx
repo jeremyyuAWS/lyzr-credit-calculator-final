@@ -67,18 +67,25 @@ export default function FormulaEditorTab({ onDebugFormula }: FormulaEditorTabPro
 
   async function loadFormulas() {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('business_formulas')
-      .select('*')
-      .order('category', { ascending: true })
-      .order('formula_name', { ascending: true });
+    try {
+      const { data, error } = await supabase
+        .from('business_formulas')
+        .select('*')
+        .order('category', { ascending: true })
+        .order('formula_name', { ascending: true });
 
-    if (error) {
-      console.error('Error loading formulas:', error);
-    } else {
-      setFormulas(data || []);
+      if (error) {
+        console.error('Error loading formulas:', error);
+        console.error('Error details:', JSON.stringify(error, null, 2));
+      } else {
+        console.log('Loaded formulas:', data?.length || 0);
+        setFormulas(data || []);
+      }
+    } catch (err) {
+      console.error('Exception loading formulas:', err);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   function startEdit(formula: Formula) {
