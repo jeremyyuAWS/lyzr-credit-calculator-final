@@ -366,11 +366,22 @@ export default function PricingVariablesTab() {
 
       {categories.map(category => {
         const categoryVars = variables.filter(v => v.category === category);
+        const isFeatureCategory = category === 'features';
         return (
           <div key={category} className="space-y-3">
-            <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
-              {category}
-            </h4>
+            <div className="flex items-center justify-between">
+              <h4 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+                {category}
+              </h4>
+              {isFeatureCategory && (
+                <div className="flex items-center gap-2 text-xs text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200">
+                  <AlertCircle className="h-3.5 w-3.5" />
+                  <span className="font-medium">
+                    Managed in Feature Pricing tab - Values sync automatically
+                  </span>
+                </div>
+              )}
+            </div>
             <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
               <table className="w-full">
                 <thead className="bg-gray-50 border-b border-gray-200">
@@ -422,9 +433,11 @@ export default function PricingVariablesTab() {
                             step="0.001"
                             value={currentValue}
                             onChange={(e) => handleValueChange(variable.id, parseFloat(e.target.value) || 0)}
+                            disabled={variable.category === 'features'}
                             className={`w-32 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-black focus:border-transparent ${
                               isModified ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
-                            }`}
+                            } ${variable.category === 'features' ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
+                            title={variable.category === 'features' ? 'This value is managed in the Feature Pricing tab' : ''}
                           />
                         </td>
                         <td className="px-4 py-3">
@@ -456,7 +469,7 @@ export default function PricingVariablesTab() {
                           )}
                         </td>
                         <td className="px-4 py-3 text-right">
-                          {variable.is_overridden && (
+                          {variable.is_overridden && variable.category !== 'features' && (
                             <button
                               onClick={() => resetVariable(variable.id)}
                               className="inline-flex items-center gap-1 px-3 py-1 text-xs border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
@@ -464,6 +477,9 @@ export default function PricingVariablesTab() {
                               <RotateCcw className="h-3 w-3" />
                               Reset
                             </button>
+                          )}
+                          {variable.category === 'features' && (
+                            <span className="text-xs text-gray-400 italic">Read-only</span>
                           )}
                         </td>
                       </tr>
