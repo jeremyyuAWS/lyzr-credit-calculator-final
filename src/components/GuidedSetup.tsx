@@ -40,7 +40,12 @@ interface VolumeSlider {
   requiredCapabilities: string[];
 }
 
-export default function GuidedSetup() {
+interface GuidedSetupProps {
+  onStepChange?: (step: number) => void;
+  onModeSelect?: (mode: 'guided' | 'chat') => void;
+}
+
+export default function GuidedSetup({ onStepChange, onModeSelect }: GuidedSetupProps = {}) {
   const [currentStep, setCurrentStep] = useState(0);
   const [sessionId] = useState(() => `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
 
@@ -79,6 +84,7 @@ export default function GuidedSetup() {
   useEffect(() => {
     loadData();
     trackEvent('guided_setup_started', {});
+    onStepChange?.(0);
   }, []);
 
   useEffect(() => {
@@ -378,6 +384,7 @@ export default function GuidedSetup() {
       trackEvent('cost_calculated', { credits: summary.credits, cost: summary.cost });
     }
     setCurrentStep(step);
+    onStepChange?.(step);
     trackEvent('step_completed', { step, step_name: getStepName(step) });
   }
 
@@ -517,11 +524,10 @@ export default function GuidedSetup() {
 
               <button
                 onClick={() => {
-                  setCurrentStep(1);
                   trackEvent('mode_selected', { mode: 'chat' });
+                  onModeSelect?.('chat');
                 }}
-                className="group bg-white hover:bg-gradient-to-br hover:from-purple-50 hover:to-pink-50 border-2 border-gray-200 hover:border-purple-500 rounded-2xl p-8 transition-all duration-300 hover:shadow-2xl hover:scale-105 text-left opacity-60 cursor-not-allowed"
-                disabled
+                className="group bg-white hover:bg-gradient-to-br hover:from-purple-50 hover:to-pink-50 border-2 border-gray-200 hover:border-purple-500 rounded-2xl p-8 transition-all duration-300 hover:shadow-2xl hover:scale-105 text-left"
               >
                 <div className="flex items-start gap-4 mb-4">
                   <div className="p-4 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl">
@@ -529,8 +535,8 @@ export default function GuidedSetup() {
                   </div>
                   <div className="flex-1">
                     <h3 className="text-2xl font-bold text-black mb-2">Chat Discovery</h3>
-                    <div className="inline-block px-3 py-1 bg-gray-100 text-gray-600 text-xs font-semibold rounded-full mb-3">
-                      COMING SOON
+                    <div className="inline-block px-3 py-1 bg-purple-100 text-purple-700 text-xs font-semibold rounded-full mb-3">
+                      FOR EXPLORERS
                     </div>
                   </div>
                 </div>
@@ -541,25 +547,26 @@ export default function GuidedSetup() {
 
                 <div className="space-y-2 mb-6">
                   <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Check className="h-4 w-4 text-gray-400" />
+                    <Check className="h-4 w-4 text-purple-600" />
                     <span>Natural conversation flow</span>
                   </div>
                   <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Check className="h-4 w-4 text-gray-400" />
+                    <Check className="h-4 w-4 text-purple-600" />
                     <span>AI-powered suggestions</span>
                   </div>
                   <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Check className="h-4 w-4 text-gray-400" />
+                    <Check className="h-4 w-4 text-purple-600" />
                     <span>Flexible exploration</span>
                   </div>
                   <div className="flex items-center gap-2 text-sm text-gray-600">
-                    <Check className="h-4 w-4 text-gray-400" />
+                    <Check className="h-4 w-4 text-purple-600" />
                     <span>Save and compare scenarios</span>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 text-gray-400 font-semibold">
-                  <span>Coming Soon</span>
+                <div className="flex items-center gap-2 text-purple-600 font-semibold group-hover:translate-x-2 transition-transform">
+                  <span>Start Chat Discovery</span>
+                  <ChevronRight className="h-5 w-5" />
                 </div>
               </button>
             </div>
