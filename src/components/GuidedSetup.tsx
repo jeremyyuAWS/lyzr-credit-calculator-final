@@ -24,6 +24,20 @@ interface VolumeInputs {
   rag_queries_per_month: number;
   db_lookups_per_month: number;
   voice_minutes_per_month: number;
+  conversations_per_month: number;
+  documents_per_month: number;
+  api_calls_per_month: number;
+  workflows_per_month: number;
+}
+
+interface VolumeSlider {
+  key: keyof VolumeInputs;
+  label: string;
+  description: string;
+  min: number;
+  max: number;
+  step: number;
+  requiredCapabilities: string[];
 }
 
 export default function GuidedSetup() {
@@ -40,6 +54,10 @@ export default function GuidedSetup() {
     rag_queries_per_month: 500,
     db_lookups_per_month: 1000,
     voice_minutes_per_month: 0,
+    conversations_per_month: 500,
+    documents_per_month: 200,
+    api_calls_per_month: 1000,
+    workflows_per_month: 300,
   });
 
   const [costSummary, setCostSummary] = useState({ credits: 0, cost: 0 });
@@ -47,6 +65,8 @@ export default function GuidedSetup() {
   const [userEmail, setUserEmail] = useState('');
   const [sliderFeedback, setSliderFeedback] = useState('');
   const [emailButtonState, setEmailButtonState] = useState<'idle' | 'loading' | 'success'>('idle');
+  const [touchedSliders, setTouchedSliders] = useState<Set<keyof VolumeInputs>>(new Set());
+  const [highlightedSlider, setHighlightedSlider] = useState<keyof VolumeInputs | null>(null);
 
   useEffect(() => {
     loadData();
@@ -101,17 +121,119 @@ export default function GuidedSetup() {
   function handleVolumeChange(key: keyof VolumeInputs, value: number) {
     setVolumes({ ...volumes, [key]: value });
 
+    const newTouched = new Set(touchedSliders);
+    newTouched.add(key);
+    setTouchedSliders(newTouched);
+
     const labels: Record<keyof VolumeInputs, string> = {
       emails_per_month: 'emails',
-      rag_queries_per_month: 'RAG queries',
-      db_lookups_per_month: 'DB lookups',
+      rag_queries_per_month: 'document searches',
+      db_lookups_per_month: 'data lookups',
       voice_minutes_per_month: 'voice minutes',
+      conversations_per_month: 'conversations',
+      documents_per_month: 'documents',
+      api_calls_per_month: 'API calls',
+      workflows_per_month: 'workflows',
     };
 
     setSliderFeedback(`Nice — ${value.toLocaleString()} ${labels[key]} selected.`);
-    setTimeout(() => setSliderFeedback(''), 2000);
+    setHighlightedSlider(key);
+
+    setTimeout(() => {
+      setSliderFeedback('');
+      setHighlightedSlider(null);
+
+      const visibleSliders = getVisibleSliders();
+      const currentIndex = visibleSliders.findIndex(s => s.key === key);
+      if (currentIndex < visibleSliders.length - 1) {
+        const nextSlider = visibleSliders[currentIndex + 1];
+        setHighlightedSlider(nextSlider.key);
+        setTimeout(() => setHighlightedSlider(null), 800);
+      }
+    }, 1500);
 
     trackEvent('volume_changed', { volume_type: key, value });
+  }
+
+  function getVisibleSliders(): VolumeSlider[] {
+    const allSliders: VolumeSlider[] = [
+      {
+        key: 'emails_per_month',
+        label: 'Emails sent per month',
+        description: 'How many automated emails will your agent send? (newsletters, responses, notifications)',
+        min: 0,
+        max: 20000,
+        step: 100,
+        requiredCapabilities: ['email_automation', 'content_generation'],
+      },
+      {
+        key: 'conversations_per_month',
+        label: 'Customer conversations per month',
+        description: 'How many back-and-forth chats will your agent handle? (support tickets, queries)',
+        min: 0,
+        max: 10000,
+        step: 100,
+        requiredCapabilities: ['multi_turn_conversation', 'rag_knowledge_base'],
+      },
+      {
+        key: 'rag_queries_per_month',
+        label: 'Document searches per month',
+        description: 'How often will users search your knowledge base? (FAQ lookups, document retrieval)',
+        min: 0,
+        max: 10000,
+        step: 100,
+        requiredCapabilities: ['rag_knowledge_base', 'document_processing'],
+      },
+      {
+        key: 'workflows_per_month',
+        label: 'Automated workflows per month',
+        description: 'How many multi-step processes will run? (approvals, task routing, notifications)',
+        min: 0,
+        max: 5000,
+        step: 50,
+        requiredCapabilities: ['multi_step_workflow', 'task_orchestration', 'multi_agent_orchestration'],
+      },
+      {
+        key: 'api_calls_per_month',
+        label: 'External data requests per month',
+        description: 'How often will your agent pull data from other systems? (CRM lookups, API integrations)',
+        min: 0,
+        max: 15000,
+        step: 100,
+        requiredCapabilities: ['api_integration', 'data_transformation'],
+      },
+      {
+        key: 'db_lookups_per_month',
+        label: 'Database queries per month',
+        description: 'How many times will your agent check internal records? (customer data, order history)',
+        min: 0,
+        max: 20000,
+        step: 100,
+        requiredCapabilities: ['db_operations'],
+      },
+      {
+        key: 'documents_per_month',
+        label: 'Documents processed per month',
+        description: 'How many files will your agent analyze? (PDFs, contracts, invoices)',
+        min: 0,
+        max: 2000,
+        step: 50,
+        requiredCapabilities: ['document_processing', 'rag_knowledge_base'],
+      },
+      {
+        key: 'voice_minutes_per_month',
+        label: 'Voice call minutes per month',
+        description: 'How many minutes of phone calls will your agent handle? (customer intake, surveys)',
+        min: 0,
+        max: 3000,
+        step: 50,
+        requiredCapabilities: ['voice_integration'],
+      },
+    ];
+
+    return allSliders.filter(slider => {
+      return slider.requiredCapabilities.some(cap => selectedCapabilities.has(cap));
+    });
   }
 
   function calculateCost() {
@@ -127,6 +249,10 @@ export default function GuidedSetup() {
     totalCredits += volumes.rag_queries_per_month * baseCreditsPerAction * capabilityMultiplier * 1.2;
     totalCredits += volumes.db_lookups_per_month * baseCreditsPerAction * capabilityMultiplier * 0.5;
     totalCredits += volumes.voice_minutes_per_month * baseCreditsPerAction * capabilityMultiplier * 2.0;
+    totalCredits += volumes.conversations_per_month * baseCreditsPerAction * capabilityMultiplier * 1.5;
+    totalCredits += volumes.documents_per_month * baseCreditsPerAction * capabilityMultiplier * 1.8;
+    totalCredits += volumes.api_calls_per_month * baseCreditsPerAction * capabilityMultiplier * 0.4;
+    totalCredits += volumes.workflows_per_month * baseCreditsPerAction * capabilityMultiplier * 2.5;
 
     const monthlyCost = totalCredits * 0.01;
 
@@ -297,94 +423,56 @@ export default function GuidedSetup() {
         {currentStep === 3 && (
           <div className="bg-white rounded-2xl shadow-lg p-8">
             <h2 className="text-2xl font-bold text-black mb-2">Select Usage Volumes</h2>
-            <p className="text-gray-600 mb-6">Estimate your monthly usage</p>
+            <p className="text-gray-600 mb-6">Estimate your monthly usage based on your selected capabilities</p>
 
             {sliderFeedback && (
-              <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm animate-in fade-in duration-200">
+              <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm font-medium animate-in fade-in duration-200">
                 {sliderFeedback}
               </div>
             )}
 
             <div className="space-y-6">
-              <div>
-                <div className="flex justify-between mb-2">
-                  <label className="font-semibold text-black">Emails per month</label>
-                  <span className="text-gray-600 font-mono">{volumes.emails_per_month.toLocaleString()}</span>
+              {getVisibleSliders().map((slider) => (
+                <div
+                  key={slider.key}
+                  className={`transition-all duration-300 ${
+                    highlightedSlider === slider.key
+                      ? 'scale-105 bg-blue-50 -mx-4 px-4 py-3 rounded-xl border-2 border-blue-300'
+                      : touchedSliders.has(slider.key)
+                      ? 'opacity-100'
+                      : 'opacity-90'
+                  }`}
+                >
+                  <div className="flex justify-between mb-2">
+                    <div>
+                      <label className="font-semibold text-black block">{slider.label}</label>
+                      <p className="text-xs text-gray-600 mt-1">{slider.description}</p>
+                    </div>
+                    <span className="text-gray-600 font-mono text-lg font-semibold ml-4">
+                      {volumes[slider.key].toLocaleString()}
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={slider.min}
+                    max={slider.max}
+                    step={slider.step}
+                    value={volumes[slider.key]}
+                    onChange={(e) => handleVolumeChange(slider.key, parseInt(e.target.value))}
+                    className="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer hover:bg-gray-300 transition-colors"
+                  />
+                  <div className="flex justify-between text-xs text-gray-500 mt-1">
+                    <span>{slider.min}</span>
+                    <span>{slider.max.toLocaleString()}</span>
+                  </div>
+                  {touchedSliders.has(slider.key) && (
+                    <div className="mt-2 flex items-center gap-1 text-green-600 text-xs font-medium">
+                      <Check className="h-3 w-3" />
+                      <span>Set</span>
+                    </div>
+                  )}
                 </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="20000"
-                  step="100"
-                  value={volumes.emails_per_month}
-                  onChange={(e) => handleVolumeChange('emails_per_month', parseInt(e.target.value))}
-                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                />
-                <div className="flex justify-between text-xs text-gray-500 mt-1">
-                  <span>0</span>
-                  <span>20,000</span>
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between mb-2">
-                  <label className="font-semibold text-black">RAG queries per month</label>
-                  <span className="text-gray-600 font-mono">{volumes.rag_queries_per_month.toLocaleString()}</span>
-                </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="10000"
-                  step="100"
-                  value={volumes.rag_queries_per_month}
-                  onChange={(e) => handleVolumeChange('rag_queries_per_month', parseInt(e.target.value))}
-                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                />
-                <div className="flex justify-between text-xs text-gray-500 mt-1">
-                  <span>0</span>
-                  <span>10,000</span>
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between mb-2">
-                  <label className="font-semibold text-black">DB lookups per month</label>
-                  <span className="text-gray-600 font-mono">{volumes.db_lookups_per_month.toLocaleString()}</span>
-                </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="20000"
-                  step="100"
-                  value={volumes.db_lookups_per_month}
-                  onChange={(e) => handleVolumeChange('db_lookups_per_month', parseInt(e.target.value))}
-                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                />
-                <div className="flex justify-between text-xs text-gray-500 mt-1">
-                  <span>0</span>
-                  <span>20,000</span>
-                </div>
-              </div>
-
-              <div>
-                <div className="flex justify-between mb-2">
-                  <label className="font-semibold text-black">Voice minutes per month</label>
-                  <span className="text-gray-600 font-mono">{volumes.voice_minutes_per_month.toLocaleString()}</span>
-                </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="3000"
-                  step="50"
-                  value={volumes.voice_minutes_per_month}
-                  onChange={(e) => handleVolumeChange('voice_minutes_per_month', parseInt(e.target.value))}
-                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                />
-                <div className="flex justify-between text-xs text-gray-500 mt-1">
-                  <span>0</span>
-                  <span>3,000</span>
-                </div>
-              </div>
+              ))}
             </div>
 
             <div className="mt-6 flex items-center justify-between">
@@ -447,11 +535,12 @@ export default function GuidedSetup() {
                 </div>
                 <div className="text-sm">
                   <span className="font-semibold">Volume Assumptions:</span>
-                  <ul className="ml-4 mt-1 list-disc">
-                    <li>{volumes.emails_per_month.toLocaleString()} emails/month</li>
-                    <li>{volumes.rag_queries_per_month.toLocaleString()} RAG queries/month</li>
-                    <li>{volumes.db_lookups_per_month.toLocaleString()} DB lookups/month</li>
-                    <li>{volumes.voice_minutes_per_month.toLocaleString()} voice minutes/month</li>
+                  <ul className="ml-4 mt-1 list-disc space-y-1">
+                    {getVisibleSliders().map((slider) => (
+                      <li key={slider.key}>
+                        {volumes[slider.key].toLocaleString()} {slider.label.toLowerCase()}
+                      </li>
+                    ))}
                   </ul>
                 </div>
               </div>
