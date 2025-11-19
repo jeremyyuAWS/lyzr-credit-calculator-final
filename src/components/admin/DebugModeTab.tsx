@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { Play, Save, ChevronRight, RefreshCw, Search, Calculator, Code, Bug } from 'lucide-react';
+import { Play, Save, ChevronRight, RefreshCw, Search, Calculator, Code, Bug, Zap, CheckCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import WhatIfSimulator from './WhatIfSimulator';
+import AssumptionDashboard from './AssumptionDashboard';
 
 interface CalculationStep {
   step: number;
@@ -556,15 +558,66 @@ export default function DebugModeTab({ debugConfig, onConfigConsumed }: DebugMod
     );
   }
 
+  const [activeTab, setActiveTab] = useState<'calculator' | 'whatif' | 'assumptions'>('calculator');
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-lg font-semibold text-black">Internal Debug Mode</h3>
-          <p className="text-sm text-gray-600 mt-1">
-            Build custom calculations using any pricing variables as inputs
-          </p>
-        </div>
+      <div>
+        <h3 className="text-lg font-semibold text-black">Internal Debug Mode</h3>
+        <p className="text-sm text-gray-600 mt-1">
+          Build custom calculations, test what-if scenarios, and validate pricing assumptions
+        </p>
+      </div>
+
+      <div className="flex items-center gap-2 border-b border-gray-300">
+        <button
+          onClick={() => setActiveTab('calculator')}
+          className={`px-4 py-3 border-b-2 transition-colors flex items-center gap-2 ${
+            activeTab === 'calculator'
+              ? 'border-black text-black font-medium'
+              : 'border-transparent text-gray-600 hover:text-black'
+          }`}
+        >
+          <Calculator className="h-4 w-4" />
+          Formula Calculator
+        </button>
+        <button
+          onClick={() => setActiveTab('whatif')}
+          className={`px-4 py-3 border-b-2 transition-colors flex items-center gap-2 ${
+            activeTab === 'whatif'
+              ? 'border-black text-black font-medium'
+              : 'border-transparent text-gray-600 hover:text-black'
+          }`}
+        >
+          <Zap className="h-4 w-4" />
+          What-If Simulator
+        </button>
+        <button
+          onClick={() => setActiveTab('assumptions')}
+          className={`px-4 py-3 border-b-2 transition-colors flex items-center gap-2 ${
+            activeTab === 'assumptions'
+              ? 'border-black text-black font-medium'
+              : 'border-transparent text-gray-600 hover:text-black'
+          }`}
+        >
+          <CheckCircle className="h-4 w-4" />
+          Assumptions
+        </button>
+      </div>
+
+      {activeTab === 'whatif' && <WhatIfSimulator />}
+
+      {activeTab === 'assumptions' && <AssumptionDashboard />}
+
+      {activeTab === 'calculator' && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="font-semibold text-black">Custom Formula Calculator</h4>
+              <p className="text-sm text-gray-600 mt-1">
+                Build custom calculations using any pricing variables as inputs
+              </p>
+            </div>
         <div className="flex items-center gap-2">
           <button
             onClick={resetToDefaults}
@@ -583,9 +636,9 @@ export default function DebugModeTab({ debugConfig, onConfigConsumed }: DebugMod
             </button>
           )}
         </div>
-      </div>
+          </div>
 
-      {/* Debug Config Notification */}
+          {/* Debug Config Notification */}
       {selectedFormulas.size > 0 && debugConfig && debugConfig.formulaKey && (
         <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4">
           <div className="flex items-start gap-3">
@@ -1000,6 +1053,8 @@ export default function DebugModeTab({ debugConfig, onConfigConsumed }: DebugMod
           )}
         </div>
       </div>
+        </div>
+      )}
     </div>
   );
 }

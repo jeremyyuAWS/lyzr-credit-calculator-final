@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Plus, Copy, Trash2, RefreshCw } from 'lucide-react';
+import { Plus, Copy, Trash2, RefreshCw, Users, GitCompare } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import ScenarioComparison from './ScenarioComparison';
+import CustomerTemplates from './CustomerTemplates';
 
 interface Scenario {
   id: string;
@@ -24,6 +26,7 @@ interface Scenario {
 }
 
 export default function ScenarioSandboxTab() {
+  const [activeTab, setActiveTab] = useState<'scenarios' | 'compare' | 'templates'>('scenarios');
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
   const [loading, setLoading] = useState(true);
   const [comparing, setComparing] = useState<string[]>([]);
@@ -202,25 +205,93 @@ export default function ScenarioSandboxTab() {
 
   const comparisonScenarios = scenarios.filter(s => comparing.includes(s.id));
 
+  function handleApplyTemplate(template: any) {
+    const newScenario: Omit<Scenario, 'id'> = {
+      scenario_name: `${template.template_name} Template`,
+      scenario_description: template.description || `Generated from ${template.template_name} template`,
+      configuration: {
+        baseCredits: 40,
+        complexityMultiplier: template.typical_complexity === 'simple' ? 0.8 : template.typical_complexity === 'complex' ? 1.5 : 1.2,
+        agentMultiplier: template.typical_features?.multi_agent ? 1.5 : 1.0,
+        scenarioMultiplier: 1.0,
+        registrationsPerDay: Math.round((template.typical_volumes?.emails_per_month || 3000) / 22),
+        workingDaysPerMonth: 22,
+      },
+      results: null,
+      is_baseline: false,
+    };
+
+    supabase
+      .from('pricing_scenarios')
+      .insert([newScenario])
+      .then(({ error }) => {
+        if (error) {
+          console.error('Error creating scenario from template:', error);
+        } else {
+          loadScenarios();
+          setActiveTab('scenarios');
+        }
+      });
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-lg font-semibold text-black">Scenario Testing Sandbox</h3>
           <p className="text-sm text-gray-600 mt-1">
-            Create and compare up to 3 pricing scenarios side-by-side
+            Create and compare pricing scenarios, A/B/C test configurations, and use customer templates
           </p>
         </div>
+        {activeTab === 'scenarios' && (
+          <button
+            onClick={() => setShowCreateForm(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            New Scenario
+          </button>
+        )}
+      </div>
+
+      <div className="flex gap-2 border-b border-gray-300">
         <button
-          onClick={() => setShowCreateForm(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
+          onClick={() => setActiveTab('scenarios')}
+          className={`px-4 py-2 font-medium transition-colors ${
+            activeTab === 'scenarios'
+              ? 'border-b-2 border-black text-black'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
         >
-          <Plus className="h-4 w-4" />
-          New Scenario
+          Scenarios
+        </button>
+        <button
+          onClick={() => setActiveTab('compare')}
+          className={`px-4 py-2 font-medium transition-colors flex items-center gap-2 ${
+            activeTab === 'compare'
+              ? 'border-b-2 border-black text-black'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <GitCompare className="h-4 w-4" />
+          A/B/C Comparison
+        </button>
+        <button
+          onClick={() => setActiveTab('templates')}
+          className={`px-4 py-2 font-medium transition-colors flex items-center gap-2 ${
+            activeTab === 'templates'
+              ? 'border-b-2 border-black text-black'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <Users className="h-4 w-4" />
+          Customer Templates
         </button>
       </div>
 
-      {showCreateForm && (
+      {activeTab === 'scenarios' && (
+        <>
+          {showCreateForm && (
         <div className="bg-gradient-to-br from-blue-50 to-cyan-50 border-2 border-blue-300 rounded-xl p-6 shadow-lg animate-in slide-in-from-top-5 duration-300">
           <h4 className="text-lg font-semibold text-black mb-4">Create New Scenario</h4>
           <div className="space-y-4">
@@ -262,9 +333,9 @@ export default function ScenarioSandboxTab() {
             </div>
           </div>
         </div>
-      )}
+          )}
 
-      {comparing.length > 0 && (
+          {comparing.length > 0 && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <h4 className="font-semibold text-black mb-4">Side-by-Side Comparison</h4>
           <div className="grid grid-cols-3 gap-4">
@@ -330,9 +401,9 @@ export default function ScenarioSandboxTab() {
             </div>
           )}
         </div>
-      )}
+          )}
 
-      <div className="space-y-4">
+          <div className="space-y-4">
         {scenarios.map(scenario => (
           <div
             key={scenario.id}
@@ -503,7 +574,17 @@ export default function ScenarioSandboxTab() {
             </div>
           </div>
         ))}
-      </div>
+          </div>
+        </>
+      )}
+
+      {activeTab === 'compare' && (
+        <ScenarioComparison />
+      )}
+
+      {activeTab === 'templates' && (
+        <CustomerTemplates onApplyTemplate={handleApplyTemplate} />
+      )}
     </div>
   );
 }
