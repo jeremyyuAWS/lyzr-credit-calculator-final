@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ChevronRight, ChevronLeft, Check, Mail, Info, Loader2 } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Check, Mail, Info, Loader2, RotateCcw, TrendingUp, DollarSign } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 interface UseCase {
@@ -67,6 +67,7 @@ export default function GuidedSetup() {
   const [emailButtonState, setEmailButtonState] = useState<'idle' | 'loading' | 'success'>('idle');
   const [touchedSliders, setTouchedSliders] = useState<Set<keyof VolumeInputs>>(new Set());
   const [highlightedSlider, setHighlightedSlider] = useState<keyof VolumeInputs | null>(null);
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -257,6 +258,82 @@ export default function GuidedSetup() {
     const monthlyCost = totalCredits * 0.01;
 
     return { credits: Math.round(totalCredits), cost: parseFloat(monthlyCost.toFixed(2)) };
+  }
+
+  function getCostBreakdown() {
+    const baseCreditsPerAction = 40;
+    const capabilityMultiplier = Array.from(selectedCapabilities).reduce((acc, key) => {
+      const cap = capabilities.find(c => c.capability_key === key);
+      return acc * (cap?.credit_multiplier || 1.0);
+    }, 1.0);
+
+    const breakdown: Array<{ label: string; credits: number; cost: number; percentage: number }> = [];
+
+    const multipliers: Record<keyof VolumeInputs, number> = {
+      emails_per_month: 0.3,
+      rag_queries_per_month: 1.2,
+      db_lookups_per_month: 0.5,
+      voice_minutes_per_month: 2.0,
+      conversations_per_month: 1.5,
+      documents_per_month: 1.8,
+      api_calls_per_month: 0.4,
+      workflows_per_month: 2.5,
+    };
+
+    const labels: Record<keyof VolumeInputs, string> = {
+      emails_per_month: 'Email Automation',
+      rag_queries_per_month: 'Document Searches',
+      db_lookups_per_month: 'Database Queries',
+      voice_minutes_per_month: 'Voice Calls',
+      conversations_per_month: 'Conversations',
+      documents_per_month: 'Document Processing',
+      api_calls_per_month: 'API Integrations',
+      workflows_per_month: 'Workflows',
+    };
+
+    let totalCredits = 0;
+
+    getVisibleSliders().forEach(slider => {
+      const credits = volumes[slider.key] * baseCreditsPerAction * capabilityMultiplier * multipliers[slider.key];
+      totalCredits += credits;
+    });
+
+    getVisibleSliders().forEach(slider => {
+      const credits = Math.round(volumes[slider.key] * baseCreditsPerAction * capabilityMultiplier * multipliers[slider.key]);
+      const cost = parseFloat((credits * 0.01).toFixed(2));
+      const percentage = totalCredits > 0 ? (credits / totalCredits) * 100 : 0;
+
+      if (credits > 0) {
+        breakdown.push({
+          label: labels[slider.key],
+          credits,
+          cost,
+          percentage: parseFloat(percentage.toFixed(1)),
+        });
+      }
+    });
+
+    return breakdown.sort((a, b) => b.credits - a.credits);
+  }
+
+  function resetSetup() {
+    setCurrentStep(1);
+    setSelectedUseCase(null);
+    setSelectedCapabilities(new Set());
+    setVolumes({
+      emails_per_month: 1000,
+      rag_queries_per_month: 500,
+      db_lookups_per_month: 1000,
+      voice_minutes_per_month: 0,
+      conversations_per_month: 500,
+      documents_per_month: 200,
+      api_calls_per_month: 1000,
+      workflows_per_month: 300,
+    });
+    setTouchedSliders(new Set());
+    setCostSummary({ credits: 0, cost: 0 });
+    setShowResetConfirm(false);
+    trackEvent('setup_reset', {});
   }
 
   function goToStep(step: number) {
@@ -496,30 +573,74 @@ export default function GuidedSetup() {
 
         {currentStep === 4 && (
           <div className="bg-white rounded-2xl shadow-lg p-8">
-            <h2 className="text-2xl font-bold text-black mb-2">Your Cost Summary</h2>
+            <div className="flex items-center justify-between mb-2">
+              <h2 className="text-2xl font-bold text-black">Your Cost Summary</h2>
+              <button
+                onClick={() => setShowResetConfirm(true)}
+                className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm"
+              >
+                <RotateCcw className="h-4 w-4" />
+                Start Over
+              </button>
+            </div>
             <p className="text-gray-600 mb-8">Based on your configuration</p>
 
             <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-300 rounded-xl p-8 mb-8">
               <div className="grid md:grid-cols-2 gap-8">
                 <div>
-                  <div className="text-sm font-semibold text-green-700 uppercase mb-2">Total Credits / Month</div>
-                  <div className="text-5xl font-bold text-black">{costSummary.credits.toLocaleString()}</div>
+                  <div className="text-sm font-semibold text-green-700 uppercase mb-2 flex items-center gap-2">
+                    <TrendingUp className="h-4 w-4" />
+                    Total Credits / Month
+                  </div>
+                  <div className="text-5xl font-bold text-black animate-in zoom-in duration-500">{costSummary.credits.toLocaleString()}</div>
                 </div>
                 <div>
-                  <div className="text-sm font-semibold text-green-700 uppercase mb-2">Estimated Cost / Month</div>
-                  <div className="text-5xl font-bold text-black">${costSummary.cost.toLocaleString()}</div>
+                  <div className="text-sm font-semibold text-green-700 uppercase mb-2 flex items-center gap-2">
+                    <DollarSign className="h-4 w-4" />
+                    Estimated Cost / Month
+                  </div>
+                  <div className="text-5xl font-bold text-black animate-in zoom-in duration-500">${costSummary.cost.toLocaleString()}</div>
+                  <div className="text-sm text-gray-600 mt-2">
+                    ${(costSummary.cost * 12).toLocaleString()}/year
+                  </div>
                 </div>
               </div>
 
               {costSummary.cost * 12 > 5000 && (
-                <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p className="text-sm font-semibold text-blue-900 mb-1">Potential Savings Available</p>
+                <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg animate-in fade-in duration-300">
+                  <p className="text-sm font-semibold text-blue-900 mb-1">💡 Potential Savings Available</p>
                   <p className="text-sm text-blue-700">
                     Your estimated annual cost is ${(costSummary.cost * 12).toLocaleString()}.
                     Talk to us about volume discounts.
                   </p>
                 </div>
               )}
+            </div>
+
+            <div className="bg-gray-50 rounded-xl p-6 mb-6">
+              <h3 className="font-bold text-black mb-4">Cost Breakdown by Feature</h3>
+              <div className="space-y-4">
+                {getCostBreakdown().map((item, index) => (
+                  <div key={item.label} className="animate-in slide-in-from-left duration-300" style={{ animationDelay: `${index * 50}ms` }}>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-semibold text-gray-700">{item.label}</span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-xs text-gray-500">{item.percentage}%</span>
+                        <span className="text-sm font-mono text-black">${item.cost}</span>
+                      </div>
+                    </div>
+                    <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-green-500 to-emerald-500 rounded-full transition-all duration-1000 ease-out"
+                        style={{ width: `${item.percentage}%`, animationDelay: `${index * 100}ms` }}
+                      />
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      {item.credits.toLocaleString()} credits
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
 
             <details className="mb-6">
@@ -609,6 +730,43 @@ export default function GuidedSetup() {
                 onClick={() => setShowEmailModal(false)}
                 disabled={emailButtonState === 'loading'}
                 className="px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showResetConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowResetConfirm(false)}
+          />
+
+          <div className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 animate-in zoom-in-95 duration-300">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="p-3 bg-orange-100 rounded-full">
+                <RotateCcw className="h-6 w-6 text-orange-600" />
+              </div>
+              <h3 className="text-2xl font-bold text-black">Start Over?</h3>
+            </div>
+
+            <p className="text-gray-600 mb-6">
+              This will reset all your selections and take you back to the beginning. Your current configuration will be lost.
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={resetSetup}
+                className="flex-1 px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-semibold"
+              >
+                Yes, Reset
+              </button>
+              <button
+                onClick={() => setShowResetConfirm(false)}
+                className="px-4 py-3 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 Cancel
               </button>
