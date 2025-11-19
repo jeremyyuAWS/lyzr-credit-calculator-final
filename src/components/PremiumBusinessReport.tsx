@@ -32,7 +32,8 @@ export default function PremiumBusinessReport({
   const [emailSent, setEmailSent] = useState(false);
   const [emailError, setEmailError] = useState<string | null>(null);
 
-  const creditPrice = 0.008;
+  // Pricing: 100 Credits = $1, therefore 1 Credit = $0.01
+  const creditPrice = 0.01;
   const monthlyCostUSD = costBreakdown.monthly_credits * creditPrice;
   const annualCostUSD = costBreakdown.annual_credits * creditPrice;
   const perTransactionUSD = costBreakdown.credits_per_transaction * creditPrice;

@@ -11,7 +11,8 @@ interface ExplainMyPriceProps {
 }
 
 export default function ExplainMyPrice({ costBreakdown, workflow, onClose, formatCurrency = (amt) => `$${amt.toFixed(2)}` }: ExplainMyPriceProps) {
-  const creditPrice = 0.008;
+  // Pricing: 100 Credits = $1, therefore 1 Credit = $0.01
+  const creditPrice = 0.01;
 
   const totalTransactions =
     workflow.emails_per_month +

@@ -17,7 +17,11 @@ export const AGENT_MULTIPLIERS = {
   orchestrated: 1.6,
 } as const;
 
-export const CREDIT_PRICE = 0.008;
+// Pricing: 100 Credits = $1, therefore 1 Credit = $0.01
+export const CREDIT_PRICE = 0.01;
+
+// Token estimation: 1 token = ~4 characters (varies by model tokenizer)
+export const CHARACTERS_PER_TOKEN = 4;
 
 export type ScenarioType = keyof typeof SCENARIO_MULTIPLIERS;
 export type ComplexityType = keyof typeof COMPLEXITY_MULTIPLIERS;
@@ -68,4 +72,13 @@ export function generateForecast(
     forecast.push(currentMonthlyCost * Math.pow(1 + growthRate, i));
   }
   return forecast;
+}
+
+// Token/Character conversion utilities
+export function estimateTokensFromCharacters(characters: number): number {
+  return Math.ceil(characters / CHARACTERS_PER_TOKEN);
+}
+
+export function estimateCharactersFromTokens(tokens: number): number {
+  return tokens * CHARACTERS_PER_TOKEN;
 }

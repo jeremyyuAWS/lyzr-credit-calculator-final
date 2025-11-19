@@ -313,7 +313,8 @@ export default function DebugModeTab({ debugConfig, onConfigConsumed }: DebugMod
       const creditsPerTransaction = context['result'] || context['creditsPerTransaction'] || 0;
       const registrationsPerDay = context['biz_txn_per_day'] || context['registrationsPerDay'] || 100;
       const workingDaysPerMonth = context['biz_working_days'] || context['workingDaysPerMonth'] || 22;
-      const creditPrice = context['credit_price_usd'] || context['creditPrice'] || 0.008;
+      // Pricing: 100 Credits = $1, therefore 1 Credit = $0.01
+      const creditPrice = context['credit_price_usd'] || context['creditPrice'] || 0.01;
 
       const monthlyCredits = creditsPerTransaction * registrationsPerDay * workingDaysPerMonth;
       const monthlyCost = monthlyCredits * creditPrice;
@@ -351,7 +352,8 @@ export default function DebugModeTab({ debugConfig, onConfigConsumed }: DebugMod
     const scenarioMultiplier = inputs['scenarioMultiplier'] || 0.8;
     const registrationsPerDay = inputs['registrationsPerDay'] || 100;
     const workingDaysPerMonth = inputs['workingDaysPerMonth'] || 22;
-    const creditPrice = inputs['credit_price_usd'] || inputs['creditPrice'] || 0.008;
+    // Pricing: 100 Credits = $1, therefore 1 Credit = $0.01
+    const creditPrice = inputs['credit_price_usd'] || inputs['creditPrice'] || 0.01;
 
     // Step 1: Apply Complexity Multiplier
     const complexityFormula = formulas.find(f => f.formula_key === 'apply_complexity_multiplier');

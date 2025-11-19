@@ -9,7 +9,8 @@ interface CostOutputPanelProps {
 }
 
 export default function CostOutputPanel({ costBreakdown, workflow }: CostOutputPanelProps) {
-  const creditPrice = 0.008;
+  // Pricing: 100 Credits = $1, therefore 1 Credit = $0.01
+  const creditPrice = 0.01;
 
   // Calculate scenarios (10th, 50th, 90th percentile)
   const scenarios = [

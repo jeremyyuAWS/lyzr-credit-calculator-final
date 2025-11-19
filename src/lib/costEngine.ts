@@ -252,7 +252,8 @@ export function calculateCompleteCostBreakdown(
 
 /**
  * Helper to convert credits to USD
+ * Pricing: 100 Credits = $1, therefore 1 Credit = $0.01
  */
-export function creditsToUSD(credits: number, creditPrice: number = 0.008): number {
+export function creditsToUSD(credits: number, creditPrice: number = 0.01): number {
   return credits * creditPrice;
 }

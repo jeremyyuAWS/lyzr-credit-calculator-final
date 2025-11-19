@@ -170,7 +170,8 @@ export default function ScenarioSandboxTab() {
       config.registrationsPerDay *
       config.workingDaysPerMonth;
 
-    const monthlyCost = monthlyCredits * 0.008;
+    // Pricing: 100 Credits = $1, therefore 1 Credit = $0.01
+    const monthlyCost = monthlyCredits * 0.01;
     const annualCost = monthlyCost * 12;
 
     return {

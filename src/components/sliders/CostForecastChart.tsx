@@ -1,6 +1,9 @@
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Area, ComposedChart } from 'recharts';
 
+// Pricing: 100 Credits = $1, therefore 1 Credit = $0.01
+const CREDIT_PRICE = 0.01;
+
 interface CostForecastChartProps {
   monthlyCost: number;
   scenarioMultiplier?: number;
@@ -60,7 +63,7 @@ export default function CostForecastChart({
 
   // Calculate total savings
   const lastMonth = forecastData[11];
-  const savingsVsCurrent = ((lastMonth.currentPath - lastMonth.optimizedPath) * 0.008);
+  const savingsVsCurrent = ((lastMonth.currentPath - lastMonth.optimizedPath) * CREDIT_PRICE);
   const savingsPercentage = ((lastMonth.currentPath - lastMonth.optimizedPath) / lastMonth.currentPath * 100).toFixed(0);
 
   return (
@@ -126,7 +129,7 @@ export default function CostForecastChart({
             <YAxis
               stroke="#6b7280"
               style={{ fontSize: '12px' }}
-              tickFormatter={(value) => formatCurrency(value * 0.008, 0)}
+              tickFormatter={(value) => formatCurrency(value * CREDIT_PRICE, 0)}
             />
             <Tooltip
               contentStyle={{
@@ -143,7 +146,7 @@ export default function CostForecastChart({
                   optimizedPath: 'With Optimization',
                   bestCase: 'Best Case'
                 };
-                return [formatCurrency(value * 0.008), labels[name] || name];
+                return [formatCurrency(value * CREDIT_PRICE), labels[name] || name];
               }}
               labelStyle={{ fontWeight: 'bold', marginBottom: '8px' }}
             />

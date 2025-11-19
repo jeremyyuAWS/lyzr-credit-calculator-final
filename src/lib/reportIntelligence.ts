@@ -41,7 +41,8 @@ export function generateExecutiveSummary(
   workflow: WorkflowConfig,
   costBreakdown: CostBreakdown
 ): string {
-  const creditPrice = 0.008;
+  // Pricing: 100 Credits = $1, therefore 1 Credit = $0.01
+  const creditPrice = 0.01;
   const monthlyCostUSD = costBreakdown.monthly_credits * creditPrice;
   const perTransactionUSD = costBreakdown.credits_per_transaction * creditPrice;
 
@@ -135,7 +136,8 @@ export function generateAgentBreakdown(
   workflow: WorkflowConfig,
   costBreakdown: CostBreakdown
 ): AgentBreakdownItem[] {
-  const creditPrice = 0.008;
+  // Pricing: 100 Credits = $1, therefore 1 Credit = $0.01
+  const creditPrice = 0.01;
   const agents: AgentBreakdownItem[] = [];
   const totalCost = costBreakdown.credits_per_transaction * creditPrice;
 
@@ -277,7 +279,8 @@ export function generateOptimizationSuggestions(
   costBreakdown: CostBreakdown
 ): OptimizationSuggestion[] {
   const suggestions: OptimizationSuggestion[] = [];
-  const creditPrice = 0.008;
+  // Pricing: 100 Credits = $1, therefore 1 Credit = $0.01
+  const creditPrice = 0.01;
   const monthlyCost = costBreakdown.monthly_credits * creditPrice;
 
   // Check for over-tokenization
@@ -367,7 +370,8 @@ export function generateOptimizationSuggestions(
  * Helper: Determine the top cost driver
  */
 function determineTopCostDriver(workflow: WorkflowConfig, costBreakdown: CostBreakdown): string {
-  const creditPrice = 0.008;
+  // Pricing: 100 Credits = $1, therefore 1 Credit = $0.01
+  const creditPrice = 0.01;
   const tokenCost = costBreakdown.token_cost_with_handling_fee * creditPrice;
   const featureCost = costBreakdown.feature_cost * creditPrice;
   const interAgentCost = costBreakdown.inter_agent_cost * creditPrice;

@@ -18,6 +18,9 @@ import type {
 } from '../lib/costEngine';
 import { supabase } from '../lib/supabase';
 
+// Pricing: 100 Credits = $1, therefore 1 Credit = $0.01
+const CREDIT_PRICE = 0.01;
+
 export interface WorkflowConfig {
   // Workflow description from chat
   workflow_description: string;
@@ -408,10 +411,10 @@ export default function BusinessSlidersTab({ initialWorkflow }: BusinessSlidersT
                         {formatWithCommas(costBreakdown.monthly_credits)} Credits
                       </p>
                       <p className="text-xl text-gray-600">
-                        {formatCurrency(costBreakdown.monthly_credits * 0.008)}
+                        {formatCurrency(costBreakdown.monthly_credits * CREDIT_PRICE)}
                       </p>
                       <p className="text-xs text-gray-500 mt-3">
-                        + {formatCurrency(costBreakdown.setup_costs * 0.008)} one-time setup
+                        + {formatCurrency(costBreakdown.setup_costs * CREDIT_PRICE)} one-time setup
                       </p>
                       <p className="text-xs text-blue-600 mt-2 font-medium">Click to see detailed breakdown →</p>
                     </button>
@@ -431,10 +434,10 @@ export default function BusinessSlidersTab({ initialWorkflow }: BusinessSlidersT
                         {formatWithCommas(costBreakdown.annual_credits)} Credits
                       </p>
                       <p className="text-xl text-gray-300">
-                        {formatCurrency(costBreakdown.annual_credits * 0.008)}
+                        {formatCurrency(costBreakdown.annual_credits * CREDIT_PRICE)}
                       </p>
                       <p className="text-xs text-gray-400 mt-3">
-                        + {formatCurrency(costBreakdown.setup_costs * 0.008)} one-time setup
+                        + {formatCurrency(costBreakdown.setup_costs * CREDIT_PRICE)} one-time setup
                       </p>
                       <p className="text-xs text-blue-400 mt-2 font-medium">Click to see detailed breakdown →</p>
                     </button>
@@ -464,13 +467,13 @@ export default function BusinessSlidersTab({ initialWorkflow }: BusinessSlidersT
                             <div>
                               <p className="text-xs text-gray-600">Monthly</p>
                               <p className={`text-base font-bold ${scenario.textColor}`}>
-                                {formatCurrency(costBreakdown.monthly_credits * scenario.multiplier * 0.008)}
+                                {formatCurrency(costBreakdown.monthly_credits * scenario.multiplier * CREDIT_PRICE)}
                               </p>
                             </div>
                             <div className="text-right">
                               <p className="text-xs text-gray-600">Annual</p>
                               <p className={`text-base font-bold ${scenario.textColor}`}>
-                                {formatCurrency(costBreakdown.annual_credits * scenario.multiplier * 0.008)}
+                                {formatCurrency(costBreakdown.annual_credits * scenario.multiplier * CREDIT_PRICE)}
                               </p>
                             </div>
                           </div>
@@ -522,7 +525,7 @@ export default function BusinessSlidersTab({ initialWorkflow }: BusinessSlidersT
                   <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
                     <p className="text-xs text-gray-600 mb-1">{selectedCurrency}</p>
                     <p className="text-2xl font-bold text-black">
-                      {formatCurrency(costBreakdown.credits_per_transaction * 0.008, 6)}
+                      {formatCurrency(costBreakdown.credits_per_transaction * CREDIT_PRICE, 6)}
                     </p>
                   </div>
                   <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
