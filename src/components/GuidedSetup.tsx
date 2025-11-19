@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ChevronRight, ChevronLeft, Check, Mail, Info, Loader2, RotateCcw, TrendingUp, DollarSign } from 'lucide-react';
+import { ChevronRight, ChevronLeft, Check, Mail, Info, Loader2, RotateCcw, TrendingUp, DollarSign, Sparkles, MessageSquare } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 interface UseCase {
@@ -41,7 +41,7 @@ interface VolumeSlider {
 }
 
 export default function GuidedSetup() {
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentStep, setCurrentStep] = useState(0);
   const [sessionId] = useState(() => `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
 
   const [useCases, setUseCases] = useState<UseCase[]>([]);
@@ -351,7 +351,7 @@ export default function GuidedSetup() {
   }
 
   function resetSetup() {
-    setCurrentStep(1);
+    setCurrentStep(0);
     setSelectedUseCase(null);
     setSelectedCapabilities(new Set());
     setVolumes({
@@ -422,38 +422,153 @@ export default function GuidedSetup() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-slate-100 p-6">
       <div className="max-w-5xl mx-auto">
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <h1 className="text-3xl font-bold text-black">Guided Setup</h1>
-            <button
-              onClick={() => setShowEmailModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
-            >
-              <Mail className="h-4 w-4" />
-              Email me this quote
-            </button>
-          </div>
-
-          <div className="flex items-center gap-3">
-            {[1, 2, 3, 4].map((step) => (
-              <div key={step} className="flex items-center gap-2">
-                <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-colors ${
-                    currentStep === step
-                      ? 'bg-black text-white'
-                      : currentStep > step
-                      ? 'bg-green-500 text-white'
-                      : 'bg-gray-200 text-gray-500'
-                  }`}
+        {currentStep > 0 && (
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <h1 className="text-3xl font-bold text-black">Guided Setup</h1>
+              {currentStep >= 4 && (
+                <button
+                  onClick={() => setShowEmailModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-black text-white rounded-lg hover:bg-gray-800 transition-colors"
                 >
-                  {currentStep > step ? <Check className="h-5 w-5" /> : step}
+                  <Mail className="h-4 w-4" />
+                  Email me this quote
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-3">
+              {[1, 2, 3, 4].map((step) => (
+                <div key={step} className="flex items-center gap-2">
+                  <div
+                    className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-colors ${
+                      currentStep === step
+                        ? 'bg-black text-white'
+                        : currentStep > step
+                        ? 'bg-green-500 text-white'
+                        : 'bg-gray-200 text-gray-500'
+                    }`}
+                  >
+                    {currentStep > step ? <Check className="h-5 w-5" /> : step}
+                  </div>
+                  <span className="text-sm font-medium text-gray-700">{getStepName(step)}</span>
+                  {step < 4 && <ChevronRight className="h-4 w-4 text-gray-400" />}
                 </div>
-                <span className="text-sm font-medium text-gray-700">{getStepName(step)}</span>
-                {step < 4 && <ChevronRight className="h-4 w-4 text-gray-400" />}
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        )}
+
+        {currentStep === 0 && (
+          <div className="min-h-[80vh] flex flex-col items-center justify-center animate-in fade-in duration-500">
+            <div className="text-center mb-12">
+              <h1 className="text-4xl font-bold text-black mb-3">Welcome to Lyzr Cost Calculator</h1>
+              <p className="text-lg text-gray-600">How would you like to estimate your costs?</p>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6 max-w-4xl w-full">
+              <button
+                onClick={() => {
+                  setCurrentStep(1);
+                  trackEvent('mode_selected', { mode: 'guided' });
+                }}
+                className="group bg-white hover:bg-gradient-to-br hover:from-blue-50 hover:to-cyan-50 border-2 border-gray-200 hover:border-blue-500 rounded-2xl p-8 transition-all duration-300 hover:shadow-2xl hover:scale-105 text-left"
+              >
+                <div className="flex items-start gap-4 mb-4">
+                  <div className="p-4 bg-gradient-to-br from-blue-500 to-cyan-500 rounded-xl group-hover:scale-110 transition-transform duration-300">
+                    <Sparkles className="h-8 w-8 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-2xl font-bold text-black mb-2">Guided Setup</h3>
+                    <div className="inline-block px-3 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full mb-3">
+                      RECOMMENDED
+                    </div>
+                  </div>
+                </div>
+
+                <p className="text-gray-700 mb-4 leading-relaxed">
+                  Perfect if you're new or want a structured approach. We'll walk you through step-by-step with smart defaults and helpful suggestions.
+                </p>
+
+                <div className="space-y-2 mb-6">
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Check className="h-4 w-4 text-green-600" />
+                    <span>Choose from pre-built use case templates</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Check className="h-4 w-4 text-green-600" />
+                    <span>Select capabilities with smart recommendations</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Check className="h-4 w-4 text-green-600" />
+                    <span>Adjust volumes with visual sliders</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Check className="h-4 w-4 text-green-600" />
+                    <span>See instant cost breakdown</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 text-blue-600 font-semibold group-hover:translate-x-2 transition-transform">
+                  <span>Start Guided Setup</span>
+                  <ChevronRight className="h-5 w-5" />
+                </div>
+              </button>
+
+              <button
+                onClick={() => {
+                  setCurrentStep(1);
+                  trackEvent('mode_selected', { mode: 'chat' });
+                }}
+                className="group bg-white hover:bg-gradient-to-br hover:from-purple-50 hover:to-pink-50 border-2 border-gray-200 hover:border-purple-500 rounded-2xl p-8 transition-all duration-300 hover:shadow-2xl hover:scale-105 text-left opacity-60 cursor-not-allowed"
+                disabled
+              >
+                <div className="flex items-start gap-4 mb-4">
+                  <div className="p-4 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl">
+                    <MessageSquare className="h-8 w-8 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-2xl font-bold text-black mb-2">Chat Discovery</h3>
+                    <div className="inline-block px-3 py-1 bg-gray-100 text-gray-600 text-xs font-semibold rounded-full mb-3">
+                      COMING SOON
+                    </div>
+                  </div>
+                </div>
+
+                <p className="text-gray-700 mb-4 leading-relaxed">
+                  For power users who prefer conversation. Chat with our AI to explore options and get personalized recommendations.
+                </p>
+
+                <div className="space-y-2 mb-6">
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Check className="h-4 w-4 text-gray-400" />
+                    <span>Natural conversation flow</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Check className="h-4 w-4 text-gray-400" />
+                    <span>AI-powered suggestions</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Check className="h-4 w-4 text-gray-400" />
+                    <span>Flexible exploration</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Check className="h-4 w-4 text-gray-400" />
+                    <span>Save and compare scenarios</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 text-gray-400 font-semibold">
+                  <span>Coming Soon</span>
+                </div>
+              </button>
+            </div>
+
+            <div className="mt-8 text-center text-sm text-gray-500">
+              <p>Don't worry, you can always restart and try a different approach</p>
+            </div>
+          </div>
+        )}
 
         {currentStep === 1 && (
           <div className="bg-white rounded-2xl shadow-lg p-8">
@@ -678,22 +793,23 @@ export default function GuidedSetup() {
               </div>
             </div>
 
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-6 mb-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-black">Calculate Your ROI</h3>
-                <button
-                  onClick={() => setShowROICalculator(!showROICalculator)}
-                  className="text-sm text-blue-600 hover:text-blue-800 font-semibold"
-                >
-                  {showROICalculator ? 'Hide' : 'Show Calculator'}
-                </button>
-              </div>
+            {touchedSliders.size > 0 && (
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-6 mb-6 animate-in slide-in-from-bottom duration-500">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-bold text-black">Calculate Your ROI</h3>
+                  <button
+                    onClick={() => setShowROICalculator(!showROICalculator)}
+                    className="text-sm text-blue-600 hover:text-blue-800 font-semibold"
+                  >
+                    {showROICalculator ? 'Hide' : 'Show Calculator'}
+                  </button>
+                </div>
 
-              {!showROICalculator && (
-                <p className="text-sm text-gray-600">
-                  See how much you'll save compared to your current operations
-                </p>
-              )}
+                {!showROICalculator && (
+                  <p className="text-sm text-gray-600">
+                    See how much you'll save compared to your current operations
+                  </p>
+                )}
 
               {showROICalculator && (
                 <div className="space-y-6">
@@ -822,7 +938,8 @@ export default function GuidedSetup() {
                   </div>
                 </div>
               )}
-            </div>
+              </div>
+            )}
 
             <details className="mb-6">
               <summary className="cursor-pointer text-sm font-semibold text-gray-700 hover:text-black">
