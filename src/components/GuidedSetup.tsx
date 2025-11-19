@@ -7,7 +7,7 @@ interface UseCase {
   template_name: string;
   template_description: string;
   icon: string;
-  default_capabilities: string[];
+  default_capabilities: string[] | any;
 }
 
 interface Capability {
@@ -72,7 +72,10 @@ export default function GuidedSetup() {
 
   function selectUseCase(useCase: UseCase) {
     setSelectedUseCase(useCase);
-    setSelectedCapabilities(new Set(useCase.default_capabilities));
+    const capabilities = Array.isArray(useCase.default_capabilities)
+      ? useCase.default_capabilities
+      : [];
+    setSelectedCapabilities(new Set(capabilities));
     trackEvent('use_case_selected', { use_case_id: useCase.id, use_case_name: useCase.template_name });
     setCurrentStep(2);
   }
