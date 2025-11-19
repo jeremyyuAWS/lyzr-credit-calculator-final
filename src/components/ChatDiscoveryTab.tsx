@@ -196,10 +196,18 @@ export default function ChatDiscoveryTab({ onComplete }: ChatDiscoveryTabProps) 
       setIsPlayingDemo(false);
       setPlayingScenario(null);
       setSessions(prev => [data, ...prev]);
-      setActiveSessionId(data.id);
       setMessages([]);
       setConversationState(initializeConversation());
-      setTimeout(() => askNextQuestion(), 500);
+      setActiveSessionId(data.id);
+
+      // Ask the first question after state updates
+      setTimeout(() => {
+        if (useLyzrAgent) {
+          askLyzrAgentWithSession(data.id, '');
+        } else {
+          askNextQuestionForSession(data.id);
+        }
+      }, 500);
     } catch (err) {
       console.error('Error creating session:', err);
     }
@@ -389,54 +397,56 @@ export default function ChatDiscoveryTab({ onComplete }: ChatDiscoveryTabProps) 
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }
 
+  async function askNextQuestionForSession(sessionId: string) {
+    const nextQuestion = getNextQuestion(conversationState);
+    if (!nextQuestion) {
+      await completeConversation();
+      return;
+    }
+
+    setIsTyping(true);
+    await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1000));
+
+    const aiMessage: Partial<ChatMessage> = {
+      session_id: sessionId,
+      role: 'ai',
+      message: nextQuestion.question,
+      metadata: {
+        question_id: nextQuestion.id,
+        question_type: nextQuestion.type,
+        options: nextQuestion.options,
+      },
+    };
+
+    const { data, error } = await supabase
+      .from('chat_messages')
+      .insert([aiMessage])
+      .select()
+      .single();
+
+    if (!error && data) {
+      setMessages(prev => [...prev, data]);
+    }
+
+    setIsTyping(false);
+  }
+
   async function askNextQuestion() {
     if (!activeSessionId) return;
 
     if (useLyzrAgent) {
       await askLyzrAgent('');
     } else {
-      const nextQuestion = getNextQuestion(conversationState);
-      if (!nextQuestion) {
-        await completeConversation();
-        return;
-      }
-
-      setIsTyping(true);
-      await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1000));
-
-      const aiMessage: Partial<ChatMessage> = {
-        session_id: activeSessionId,
-        role: 'ai',
-        message: nextQuestion.question,
-        metadata: {
-          question_id: nextQuestion.id,
-          question_type: nextQuestion.type,
-          options: nextQuestion.options,
-        },
-      };
-
-      const { data, error } = await supabase
-        .from('chat_messages')
-        .insert([aiMessage])
-        .select()
-        .single();
-
-      if (!error && data) {
-        setMessages(prev => [...prev, data]);
-      }
-
-      setIsTyping(false);
+      await askNextQuestionForSession(activeSessionId);
     }
   }
 
-  async function askLyzrAgent(userMessage: string) {
-    if (!activeSessionId) return;
-
+  async function askLyzrAgentWithSession(sessionId: string, userMessage: string) {
     try {
       setAgentError(null);
       setIsTyping(true);
 
-      const session = sessions.find(s => s.id === activeSessionId);
+      const session = sessions.find(s => s.id === sessionId);
       let lyzrSessionId = session?.metadata?.lyzr_session_id;
 
       if (!lyzrSessionId) {
@@ -444,7 +454,7 @@ export default function ChatDiscoveryTab({ onComplete }: ChatDiscoveryTabProps) 
         await supabase
           .from('chat_sessions')
           .update({ metadata: { lyzr_session_id: lyzrSessionId } })
-          .eq('id', activeSessionId);
+          .eq('id', sessionId);
       }
 
       const userId = 'user@lyzr.ai';
@@ -453,7 +463,7 @@ export default function ChatDiscoveryTab({ onComplete }: ChatDiscoveryTabProps) 
       await new Promise(resolve => setTimeout(resolve, 500));
 
       const aiMessage: Partial<ChatMessage> = {
-        session_id: activeSessionId,
+        session_id: sessionId,
         role: 'ai',
         message: response.response,
         metadata: {
@@ -481,7 +491,7 @@ export default function ChatDiscoveryTab({ onComplete }: ChatDiscoveryTabProps) 
             extracted_data: extractedData,
             updated_at: new Date().toISOString(),
           })
-          .eq('id', activeSessionId);
+          .eq('id', sessionId);
 
         setConversationState(prev => ({
           ...prev,
@@ -499,6 +509,11 @@ export default function ChatDiscoveryTab({ onComplete }: ChatDiscoveryTabProps) 
       setAgentError('Unable to connect to Lyzr Agent. Please toggle to Demo Mode to continue.');
       setIsTyping(false);
     }
+  }
+
+  async function askLyzrAgent(userMessage: string) {
+    if (!activeSessionId) return;
+    await askLyzrAgentWithSession(activeSessionId, userMessage);
   }
 
   async function handleUserResponse(response: any) {
