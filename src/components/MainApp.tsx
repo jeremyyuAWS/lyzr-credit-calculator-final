@@ -5,9 +5,10 @@ import GuidedSetup from './GuidedSetup';
 import WelcomeModal from './WelcomeModal';
 import Header from './Header';
 import AdminPanel from './AdminPanel';
+import ResponsibleAI from './ResponsibleAI';
 import type { WorkflowConfig } from './BusinessSlidersTab';
 
-type TabType = 'guided-setup' | 'chat-discovery' | 'business-calculator';
+type TabType = 'guided-setup' | 'chat-discovery' | 'business-calculator' | 'responsible-ai';
 
 export default function MainApp() {
   const [activeTab, setActiveTab] = useState<TabType>('guided-setup');
@@ -81,6 +82,16 @@ export default function MainApp() {
             >
               Business Calculator
             </button>
+            <button
+              onClick={() => setActiveTab('responsible-ai')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                activeTab === 'responsible-ai'
+                  ? 'border-black text-black'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Responsible AI
+            </button>
           </nav>
         </div>
       </div>
@@ -90,6 +101,7 @@ export default function MainApp() {
         {activeTab === 'guided-setup' && <GuidedSetup />}
         {activeTab === 'chat-discovery' && <ChatDiscoveryTab onComplete={handleChatComplete} />}
         {activeTab === 'business-calculator' && <BusinessSlidersTab initialWorkflow={workflowConfig || undefined} />}
+        {activeTab === 'responsible-ai' && <ResponsibleAI />}
       </div>
 
       {/* Welcome Modal */}

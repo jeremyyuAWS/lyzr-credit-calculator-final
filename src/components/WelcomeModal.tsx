@@ -32,11 +32,14 @@ export default function WelcomeModal({ isOpen, onClose, onSelectMode }: WelcomeM
 
         <div className="text-center mb-8">
           <h2 className="text-3xl font-bold text-black mb-2">
-            How would you like to explore Lyzr's Cost Calculator?
+            Welcome to Lyzr's AI Credits Calculator
           </h2>
-          <p className="text-gray-600">
+          <p className="text-gray-600 mb-4">
             Choose your preferred way to discover pricing and build your agent configuration
           </p>
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
+            <span>Built with Lyzr's Responsible AI guardrails</span>
+          </div>
         </div>
 
         <div className="grid md:grid-cols-2 gap-6 mb-6">
@@ -87,9 +90,14 @@ export default function WelcomeModal({ isOpen, onClose, onSelectMode }: WelcomeM
           </button>
         </div>
 
-        <p className="text-center text-sm text-gray-500">
-          You can switch modes anytime from the top-right menu
-        </p>
+        <div className="text-center space-y-2">
+          <p className="text-sm text-gray-500">
+            You can switch modes anytime from the top navigation menu
+          </p>
+          <p className="text-sm text-gray-600">
+            Learn more about our AI safety practices in the <span className="font-semibold text-black">Responsible AI</span> tab
+          </p>
+        </div>
       </div>
     </div>
   );
