@@ -68,6 +68,13 @@ export default function GuidedSetup() {
   const [touchedSliders, setTouchedSliders] = useState<Set<keyof VolumeInputs>>(new Set());
   const [highlightedSlider, setHighlightedSlider] = useState<keyof VolumeInputs | null>(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showROICalculator, setShowROICalculator] = useState(false);
+  const [roiInputs, setROIInputs] = useState({
+    currentFTEs: 2,
+    hourlyRate: 50,
+    hoursPerMonth: 160,
+    additionalToolCosts: 500,
+  });
 
   useEffect(() => {
     loadData();
@@ -316,6 +323,33 @@ export default function GuidedSetup() {
     return breakdown.sort((a, b) => b.credits - a.credits);
   }
 
+  function calculateROI() {
+    const currentMonthlyCost =
+      (roiInputs.currentFTEs * roiInputs.hourlyRate * roiInputs.hoursPerMonth) +
+      roiInputs.additionalToolCosts;
+
+    const lyzrMonthlyCost = costSummary.cost;
+    const monthlySavings = currentMonthlyCost - lyzrMonthlyCost;
+    const annualSavings = monthlySavings * 12;
+    const savingsPercentage = currentMonthlyCost > 0
+      ? ((monthlySavings / currentMonthlyCost) * 100).toFixed(1)
+      : '0';
+
+    const paybackMonths = lyzrMonthlyCost > 0 && monthlySavings > 0
+      ? Math.ceil(lyzrMonthlyCost / monthlySavings)
+      : 0;
+
+    return {
+      currentMonthlyCost: Math.round(currentMonthlyCost),
+      lyzrMonthlyCost: Math.round(lyzrMonthlyCost),
+      monthlySavings: Math.round(monthlySavings),
+      annualSavings: Math.round(annualSavings),
+      savingsPercentage: parseFloat(savingsPercentage),
+      paybackMonths,
+      roi: currentMonthlyCost > 0 ? ((monthlySavings / lyzrMonthlyCost) * 100).toFixed(0) : '0',
+    };
+  }
+
   function resetSetup() {
     setCurrentStep(1);
     setSelectedUseCase(null);
@@ -333,6 +367,7 @@ export default function GuidedSetup() {
     setTouchedSliders(new Set());
     setCostSummary({ credits: 0, cost: 0 });
     setShowResetConfirm(false);
+    setShowROICalculator(false);
     trackEvent('setup_reset', {});
   }
 
@@ -641,6 +676,152 @@ export default function GuidedSetup() {
                   </div>
                 ))}
               </div>
+            </div>
+
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-6 mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-bold text-black">Calculate Your ROI</h3>
+                <button
+                  onClick={() => setShowROICalculator(!showROICalculator)}
+                  className="text-sm text-blue-600 hover:text-blue-800 font-semibold"
+                >
+                  {showROICalculator ? 'Hide' : 'Show Calculator'}
+                </button>
+              </div>
+
+              {!showROICalculator && (
+                <p className="text-sm text-gray-600">
+                  See how much you'll save compared to your current operations
+                </p>
+              )}
+
+              {showROICalculator && (
+                <div className="space-y-6">
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Current Team Size (FTEs)
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="100"
+                        value={roiInputs.currentFTEs}
+                        onChange={(e) => setROIInputs({ ...roiInputs, currentFTEs: parseInt(e.target.value) || 1 })}
+                        className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">People doing this work manually</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Average Hourly Rate ($)
+                      </label>
+                      <input
+                        type="number"
+                        min="10"
+                        max="500"
+                        value={roiInputs.hourlyRate}
+                        onChange={(e) => setROIInputs({ ...roiInputs, hourlyRate: parseInt(e.target.value) || 50 })}
+                        className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Fully loaded cost per hour</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Hours per Month
+                      </label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="200"
+                        value={roiInputs.hoursPerMonth}
+                        onChange={(e) => setROIInputs({ ...roiInputs, hoursPerMonth: parseInt(e.target.value) || 160 })}
+                        className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Time spent on these tasks</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Additional Tool Costs ($/month)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="10000"
+                        value={roiInputs.additionalToolCosts}
+                        onChange={(e) => setROIInputs({ ...roiInputs, additionalToolCosts: parseInt(e.target.value) || 0 })}
+                        className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Software, APIs, infrastructure</p>
+                    </div>
+                  </div>
+
+                  <div className="border-t-2 border-blue-200 pt-6">
+                    {(() => {
+                      const roi = calculateROI();
+                      return (
+                        <div className="space-y-4">
+                          <div className="grid md:grid-cols-3 gap-4">
+                            <div className="bg-white rounded-lg p-4 shadow-sm">
+                              <div className="text-xs font-semibold text-gray-600 uppercase mb-1">Current Monthly Cost</div>
+                              <div className="text-2xl font-bold text-gray-800">${roi.currentMonthlyCost.toLocaleString()}</div>
+                            </div>
+
+                            <div className="bg-white rounded-lg p-4 shadow-sm">
+                              <div className="text-xs font-semibold text-gray-600 uppercase mb-1">Lyzr Monthly Cost</div>
+                              <div className="text-2xl font-bold text-green-600">${roi.lyzrMonthlyCost.toLocaleString()}</div>
+                            </div>
+
+                            <div className="bg-white rounded-lg p-4 shadow-sm">
+                              <div className="text-xs font-semibold text-gray-600 uppercase mb-1">Monthly Savings</div>
+                              <div className="text-2xl font-bold text-blue-600">${roi.monthlySavings.toLocaleString()}</div>
+                            </div>
+                          </div>
+
+                          {roi.monthlySavings > 0 && (
+                            <div className="bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-xl p-6 animate-in zoom-in duration-300">
+                              <div className="grid md:grid-cols-3 gap-6">
+                                <div>
+                                  <div className="text-sm font-semibold opacity-90 mb-1">Annual Savings</div>
+                                  <div className="text-3xl font-bold">${roi.annualSavings.toLocaleString()}</div>
+                                </div>
+
+                                <div>
+                                  <div className="text-sm font-semibold opacity-90 mb-1">Cost Reduction</div>
+                                  <div className="text-3xl font-bold">{roi.savingsPercentage}%</div>
+                                </div>
+
+                                <div>
+                                  <div className="text-sm font-semibold opacity-90 mb-1">Payback Period</div>
+                                  <div className="text-3xl font-bold">
+                                    {roi.paybackMonths < 1 ? 'Immediate' : `${roi.paybackMonths} month${roi.paybackMonths > 1 ? 's' : ''}`}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="mt-4 pt-4 border-t border-white/20">
+                                <p className="text-sm">
+                                  🎯 You'll save <span className="font-bold">${roi.monthlySavings.toLocaleString()}/month</span> by switching to Lyzr —
+                                  that's a <span className="font-bold">{roi.roi}% ROI</span> on your investment.
+                                </p>
+                              </div>
+                            </div>
+                          )}
+
+                          {roi.monthlySavings <= 0 && (
+                            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-sm text-yellow-800">
+                              Based on your inputs, your current costs appear lower than Lyzr. Consider the value of automation, scalability, and reduced errors that Lyzr provides beyond direct cost comparison.
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+              )}
             </div>
 
             <details className="mb-6">
